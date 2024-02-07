@@ -288,8 +288,6 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
               expirationTime: nowInSeconds + durationInSeconds,
             }
 
-            console.log(order)
-
             setConfirmingText("Signing order...")
             signer.signTypedData(domain, MARKET_CONTRACT_ORDER_TYPES, order)
               .then((signature) => {

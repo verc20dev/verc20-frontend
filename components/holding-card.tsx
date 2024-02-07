@@ -105,6 +105,8 @@ export const HoldingCard = ({name, badges, balance, price, isSelf}: HoldingCardP
           size="sm"
           className="text-sm font-bold"
           startContent={<SwapArrowIcon/>}
+          href={`/marketplace/tokens/${name}`}
+          as={Link}
         >
           Trade
         </Button>

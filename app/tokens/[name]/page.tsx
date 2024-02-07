@@ -409,7 +409,10 @@ export default function TokenDetailPage({params}: { params: { name: string } }) 
                 isOpen={transferTokenModalOpen}
                 onOpenChange={onTransferTokenModalOpenChange}
               />
-              <Button color="primary" startContent={<SwapArrowIcon/>} className="font-bold">
+              <Button
+                color="primary" startContent={<SwapArrowIcon/>} className="font-bold"
+                as={Link} href={`/marketplace/tokens/${params.name}`}
+              >
                 Trade
               </Button>
             </div>

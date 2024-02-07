@@ -215,8 +215,6 @@ export default function TokensPage() {
     return itemsMapping[tick].isOfficial
   }, [itemsMapping])
 
-  console.log(itemsMapping)
-
   const renderCell = useCallback((user: any, columnKey: React.Key) => {
     const cellValue = user[columnKey as keyof any];
 

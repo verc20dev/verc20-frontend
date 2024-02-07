@@ -1,14 +1,11 @@
 import { Button } from "@nextui-org/button";
-import {Image} from "@nextui-org/react";
+import { Image } from "@nextui-org/react";
+import { useRouter } from "next/navigation";
+import { Link } from "@nextui-org/link";
+import { siteConfig } from "@/config/site";
 
 
 export default function Home() {
-  const spinKeyFrame = {
-    from: { transform: 'rotate(0deg)' },
-    to: { transform: 'rotate(360deg)' },
-  }
-
-
   return (
     <section className="flex-col h-full">
       <div className="relative flex h-full items-center">
@@ -22,10 +19,20 @@ export default function Home() {
             <span>Heightened <span className="text-blue-800">Security</span></span>&nbsp;
           </h2>
           <div className="mt-8 gap-8">
-            <Button variant="ghost" radius="sm" size="lg" className="font-bold">
+            <Button
+              variant="ghost" radius="sm" size="lg" className="font-bold"
+              as={Link}
+              showAnchorIcon
+              href={siteConfig.links.docs}
+              target="_blank"
+            >
               Read More
             </Button>
-            <Button color="primary" radius="sm" size="lg" className="font-bold ml-8">
+            <Button
+              color="primary" radius="sm" size="lg" className="font-bold ml-8"
+              as={Link}
+              href="/tokens"
+            >
               Go to App
             </Button>
           </div>

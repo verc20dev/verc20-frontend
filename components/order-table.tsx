@@ -97,7 +97,6 @@ const OrderTable = (props: OrderTableProps) => {
       return []
     }
 
-    console.log(orderData.data)
     return orderData.data.map((item: any) => {
       return {
         id: item.id,

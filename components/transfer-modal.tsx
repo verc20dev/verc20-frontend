@@ -1,21 +1,17 @@
 'use client'
 
-import { FC, useCallback, useState } from "react";
-import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-} from "@nextui-org/modal";
+import React, { FC, useCallback, useMemo, useState } from "react";
+import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, } from "@nextui-org/modal";
 import { Button } from "@nextui-org/button";
 import { Input } from "@nextui-org/input";
 import { Spinner } from "@nextui-org/spinner";
 import { useAccount } from "wagmi";
 import { useEthersSigner } from "@/hook/ethers";
 import { enqueueSnackbar } from "notistack";
-import { parseEther, isAddress } from "viem";
+import { isAddress, parseEther } from "viem";
 import { formTransferInput } from "@/utils/tx-message";
+import { API_ENDPOINT } from "@/config/constants";
+import useSWR from "swr";
 
 export interface TransferTokenModalProps {
   tokenName: string;
@@ -28,11 +24,16 @@ export const TransferTokenModal: FC<TransferTokenModalProps> = ({
   isOpen,
   onOpenChange
 }: TransferTokenModalProps) => {
+
+  const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
   const [amt, setAmt] = useState('');
-  const [amtValid, setAmtValid] = useState(false);
+  const [amtValid, setAmtValid] = useState(true);
+  const [amountErrorText, setAmountErrorText] = React.useState<string>("");
+
 
   const [recipient, setRecipient] = useState('');
-  const [recipientValid, setRecipientValid] = useState(false);
+  const [recipientValid, setRecipientValid] = useState(true);
 
   const [isConfirming, setIsConfirming] = useState(false);
 
@@ -40,21 +41,47 @@ export const TransferTokenModal: FC<TransferTokenModalProps> = ({
   const {address, isConnected, isDisconnected} = useAccount();
   const signer = useEthersSigner();
 
+  const userBalanceUrl = `${API_ENDPOINT}/holders/${address}?tick=${tokenName}`
+  const {data: userBalanceData, error: userBalanceError} = useSWR(userBalanceUrl, fetcher, {refreshInterval: 20000});
+
+  const userBalance = useMemo(() => {
+    if (userBalanceData?.tokens?.length > 0) {
+      return userBalanceData.tokens[0].balance;
+    }
+    return "0";
+  }, [userBalanceData])
 
   const onAmtChange = useCallback((value: string) => {
-    const numericValue = Number(value);
     setAmt(value);
-    if (isNaN(numericValue) || numericValue <= 0) {
+
+    // check if amount NaN
+    if (Number.isNaN(Number(value))) {
       setAmtValid(false);
-      setTransferDisabled(true);
+      setAmountErrorText("Amount must be a number");
       return;
     }
-    // TODO: add balance check
-    setAmtValid(true);
-    if (recipientValid) {
-      setTransferDisabled(false);
+
+    // check if amount > 0
+    if (Number(value) <= 0) {
+      setAmtValid(false);
+      setAmountErrorText("Amount must be greater than 0");
+      return;
     }
-  }, [recipientValid]);
+
+    let maxAmount = "0";
+    if (userBalanceData?.tokens?.length > 0) {
+      maxAmount = userBalanceData.tokens[0].balance;
+    }
+
+
+    if (Number(value) > Number(maxAmount)) {
+      setAmtValid(false);
+      setAmountErrorText("Amount must be less than or equal to your max token balance");
+    } else {
+      setAmtValid(true);
+      setAmountErrorText("");
+    }
+  }, [userBalanceData]);
 
   const onRecipientChange = useCallback((value: string) => {
     setRecipient(value);
@@ -124,6 +151,11 @@ export const TransferTokenModal: FC<TransferTokenModalProps> = ({
     recipientValid, signer, tokenName
   ])
 
+  const canTransfer = useMemo(() => {
+    return isConnected && !isDisconnected && amtValid &&
+      recipientValid && amt !== "" && recipient !== ""
+  }, [amt, amtValid, isConnected, isDisconnected, recipient, recipientValid]);
+
 
   return <>
     <Modal isOpen={isOpen} onOpenChange={onOpenChange} backdrop="blur" size="xl">
@@ -135,31 +167,40 @@ export const TransferTokenModal: FC<TransferTokenModalProps> = ({
             </ModalHeader>
             <ModalBody>
               <div className="flex flex-col gap-4 mt-4">
+                <div className="flex justify-between items-start font-mono">
+                  Balance: <span className="font-bold">{userBalance}&nbsp;{tokenName}</span>
+                </div>
                 <div className="flex flex-col items-start sm:flex-row sm:justify-between sm:items-start">
-                  <p className="font-bold mb-2 sm:mb-0">Recipient:</p>
                   <Input
-                    size="sm"
+                    label={"Recipient"}
+                    labelPlacement={"outside"}
+                    placeholder=""
+                    size="lg"
                     variant="bordered"
                     fullWidth={false}
-                    className={"w-full sm:w-[420px] font-mono"}
+                    className={"font-mono"}
                     value={recipient}
                     onValueChange={onRecipientChange}
                     isInvalid={!recipientValid}
                     errorMessage={!recipientValid && "Invalid recipient address"}
                     isClearable
+                    isRequired
                   />
                 </div>
                 <div className="flex flex-col items-start sm:flex-row sm:justify-between sm:items-start">
-                  <p className="font-bold mb-2 sm:mb-0">Amount:</p>
                   <Input
-                    size="sm"
+                    label="Amount"
+                    labelPlacement={"outside"}
+                    placeholder=""
+                    size="lg"
                     variant="bordered"
                     fullWidth={false}
-                    className={"w-full sm:w-[420px] font-mono"}
+                    className={"font-mono"}
+                    isRequired
                     value={amt}
                     onValueChange={onAmtChange}
                     isInvalid={!amtValid}
-                    errorMessage={!amtValid && "Invalid amount"}
+                    errorMessage={amountErrorText}
                     isClearable
                   />
                 </div>
@@ -177,7 +218,7 @@ export const TransferTokenModal: FC<TransferTokenModalProps> = ({
                     <Button color="danger" variant="light" onPress={onClose}>
                       Cancel
                     </Button>
-                    <Button color="primary" isDisabled={transferDisabled} onPress={onTransfer}>
+                    <Button color="primary" isDisabled={!canTransfer} onPress={onTransfer}>
                       Transfer
                     </Button>
                   </>
