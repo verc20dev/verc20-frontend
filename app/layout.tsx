@@ -5,6 +5,8 @@ import '@rainbow-me/rainbowkit/styles.css';
 import { Providers } from "@/app/providers";
 import { Navbar } from "@/components/navbar";
 import Footer from "@/components/footer";
+import { SpeedInsights } from "@vercel/speed-insights/next"
+import { Analytics } from '@vercel/analytics/react';
 
 const sansMono = Noto_Sans_Mono({
   subsets: ['latin'],
@@ -24,9 +26,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className={`${sansMono.variable}`}>
-      <head />
+      <head/>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
+        <Providers themeProps={{attribute: "class", defaultTheme: "dark"}}>
           <div className="relative flex flex-col h-screen">
             <Navbar/>
             <main className="container mx-auto max-w-7xl px-6 flex-grow">
@@ -37,7 +39,9 @@ export default function RootLayout({
             </footer>
           </div>
         </Providers>
+        <SpeedInsights/>
+        <Analytics/>
       </body>
     </html>
-)
+  )
 }
