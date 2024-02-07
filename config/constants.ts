@@ -6,6 +6,10 @@ export const ETH_PRICE_ENDPOINT = process.env.NEXT_PUBLIC_ETH_PRICE_ENDPOINT || 
 
 export const MARKET_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_MARKET_CONTRACT_ADDRESS || '0xAAA'
 
+export const CHAIN_NAME = process.env.NEXT_PUBLIC_CHAIN_NAME || 'goerli'
+export const INFURA_API_KEY = process.env.NEXT_PUBLIC_INFURA_API_KEY || ''
+export const ALCHEMY_API_KEY = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || ''
+
 export const MARKET_CONTRACT_DOMAIN = {
   name: "VERC20Market",
   version: "1.0",
