@@ -42,7 +42,7 @@ export const Navbar = () => {
         />
         <NavbarBrand as="li" className="max-w-fit">
           <NextLink className="flex justify-start items-center gap-1" href="/">
-            <div className="rotate-180">
+            <div>
               <Logo/>
             </div>
             <p className="font-bold text-inherit">vERC-20</p>
