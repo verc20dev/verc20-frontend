@@ -107,7 +107,6 @@ export const Navbar = () => {
 
       <NavbarContent className="flex right-0" justify="end">
         <NavbarItem className="flex gap-1">
-          <ThemeSwitch/>
           <CustomConnectBtn/>
         </NavbarItem>
       </NavbarContent>
