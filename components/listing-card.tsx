@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardBody, CardFooter, CardHeader, Progress } from "@nextui-org/react";
 import { Button } from "@nextui-org/button";
 import { formatEther } from "viem";
@@ -32,6 +32,7 @@ export interface ListingCardProps {
   input: string
   signature: string
   address: string
+  setParentRefetch?: (refetch: boolean) => void
 }
 
 const shorten = (address: string): string => {
@@ -41,6 +42,22 @@ const shorten = (address: string): string => {
 }
 
 const ListingCard = (props: ListingCardProps) => {
+
+  const [confirming, setConfirming] = useState(false)
+
+  const alertUser = (e: any) => {
+    e.preventDefault();
+    e.returnValue = "";
+  };
+
+  useEffect(() => {
+    if (confirming) {
+      window.addEventListener("beforeunload", alertUser);
+      return () => {
+        window.removeEventListener("beforeunload", alertUser);
+      };
+    }
+  }, [confirming]);
 
   const parsedInput = useCallback(() => {
     if (props.input === undefined) {
@@ -93,6 +110,8 @@ const ListingCard = (props: ListingCardProps) => {
       } else {
         enqueueSnackbar('Error: Tx failed to send', {variant: 'error'})
       }
+      props.setParentRefetch?.(true)
+      setConfirming(false)
     },
   })
 
@@ -124,13 +143,15 @@ const ListingCard = (props: ListingCardProps) => {
           console.log(e)
           enqueueSnackbar('Error: Failed to update order status', {variant: 'error'})
         })
+        .finally(() => {
+          props.setParentRefetch?.(true)
+          setConfirming(false)
+          // refetch order
+          mutate(
+            key => typeof key === 'string' && key.startsWith(ordersEpStart),
+          )
+        })
     },
-    onSettled: () => {
-      // refetch order
-      mutate(
-        key => typeof key === 'string' && key.startsWith(ordersEpStart),
-      )
-    }
   })
 
   const {
@@ -155,6 +176,8 @@ const ListingCard = (props: ListingCardProps) => {
       } else {
         enqueueSnackbar('Error: Tx failed to send', {variant: 'error'})
       }
+      props.setParentRefetch?.(true)
+      setConfirming(false)
     }
   })
 
@@ -185,6 +208,14 @@ const ListingCard = (props: ListingCardProps) => {
         .catch((e) => {
           console.log(e)
           enqueueSnackbar('Error: Failed to update order status', {variant: 'error'})
+        })
+        .finally(() => {
+          props.setParentRefetch?.(true)
+          setConfirming(false)
+          // refetch order
+          mutate(
+            key => typeof key === 'string' && key.startsWith(ordersEpStart),
+          )
         })
     },
   })
@@ -225,9 +256,11 @@ const ListingCard = (props: ListingCardProps) => {
       return
     }
 
+    props.setParentRefetch?.(false)
+    setConfirming(true)
     takeOrder()
 
-  }, [takeOrder])
+  }, [takeOrder, props])
 
   const onCancel = useCallback(() => {
 
@@ -235,13 +268,14 @@ const ListingCard = (props: ListingCardProps) => {
       enqueueSnackbar('Error: Contract not ready', {variant: 'error'})
       return
     }
-
+    props.setParentRefetch?.(false)
+    setConfirming(true)
     cancelOrder()
 
-  }, [cancelOrder])
+  }, [cancelOrder, props])
 
   const cardFooter = useMemo(() => {
-    if (takeOrderLoading || waitTakeTxLoading || waitCancelTxLoading || cancelOrderLoading) {
+    if (takeOrderLoading || waitTakeTxLoading || waitCancelTxLoading || cancelOrderLoading || confirming) {
       return (
         <Button color="primary" className="font-bold" isDisabled startContent={<Spinner color="white"/>}>
           Confirming...
@@ -268,7 +302,7 @@ const ListingCard = (props: ListingCardProps) => {
     )
   }, [
     takeOrderLoading, waitTakeTxLoading, waitCancelTxLoading,
-    cancelOrderLoading, props, onBuy, onCancel
+    cancelOrderLoading, props, onBuy, onCancel, confirming
   ])
 
 

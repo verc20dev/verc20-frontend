@@ -12,6 +12,7 @@ export interface OrderTableProps {
   shouldFetch?: boolean
   ethPrice: string
   justSelf?: boolean
+  setParentRefetch?: (refetch: boolean) => void
 }
 
 const formTokensQueryParam = (
@@ -67,12 +68,21 @@ const OrderTable = (props: OrderTableProps) => {
     ordersEp = `${ordersEp}&owner=${props.address}`
   }
 
+  // const {
+  //   data: orderData,
+  //   error: orderDataErr,
+  //   isLoading: orderLoading,
+  //   isValidating: orderValidating,
+  // } = useSWR(props.shouldFetch ? ordersEp : null, fetcher)
+
   const {
     data: orderData,
     error: orderDataErr,
     isLoading: orderLoading,
     isValidating: orderValidating,
-  } = useSWR(props.shouldFetch ? ordersEp : null, fetcher)
+  } = useSWR(ordersEp, fetcher, {
+    revalidateOnFocus: props.shouldFetch,
+  })
 
   const orderItems = useMemo(() => {
     if (orderData === undefined) {
@@ -148,6 +158,7 @@ const OrderTable = (props: OrderTableProps) => {
                 input={item.input}
                 address={props.address}
                 signature={item.signature}
+                setParentRefetch={props.setParentRefetch}
               />
             )
           })

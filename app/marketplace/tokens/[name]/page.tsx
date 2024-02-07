@@ -2,24 +2,20 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import { Link } from "@nextui-org/link";
-import { BackIcon, CoinIcon, EthereumIcon, SearchIcon, SwapArrowIcon } from "@/components/icons";
+import { BackIcon, CoinIcon, EthereumIcon } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { OfficialBadge, VerifiedBadge } from "@/components/badges";
 import { Button } from "@nextui-org/button";
 import useSWR from "swr";
-import { API_ENDPOINT, BLOCK_EXPLORER_URL, ETH_PRICE_ENDPOINT } from "@/config/constants";
+import { API_ENDPOINT, ETH_PRICE_ENDPOINT } from "@/config/constants";
 import CreateListingModal from "@/components/create-listing-modal";
 import { Card, CardBody, CardFooter, CardHeader, Chip, Divider, Tab, Tabs, useDisclosure } from "@nextui-org/react";
-import { ArrowRightIcon } from "@nextui-org/shared-icons";
 import { formatEther, parseEther } from "viem";
-import ListingCard from "@/components/listing-card";
-import { HoldingCard } from "@/components/holding-card";
-import { Spinner } from "@nextui-org/spinner";
-import { Input } from "@nextui-org/input";
 import { useAccount } from "wagmi";
 import ActivityTable from "@/components/activity-table";
 import OrderTable from "@/components/order-table";
 import { getBigInt } from "ethers";
+
 
 const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
   const router = useRouter()
@@ -35,17 +31,19 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
 
   const [selectedTab, setSelectedTab] = useState<string>('listed')
 
+  const [shouldFetch, setShouldFetch] = useState<boolean>(true)
+
   const shouldFetchOrders = useMemo(() => {
-    return selectedTab === 'listed'
-  }, [selectedTab])
+    return selectedTab === 'listed' && shouldFetch
+  }, [selectedTab, shouldFetch])
 
   const shouldFetchActivities = useMemo(() => {
-    return selectedTab === 'activities'
-  }, [selectedTab])
+    return selectedTab === 'activities' && shouldFetch
+  }, [selectedTab, shouldFetch])
 
   const shouldFetchMyOrders = useMemo(() => {
-    return selectedTab === 'myOrders'
-  }, [selectedTab])
+    return selectedTab === 'myOrders' && shouldFetch
+  }, [selectedTab, shouldFetch])
 
 
   const {
@@ -66,8 +64,6 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
     onOpen: onCreateListingModalOpen,
     onOpenChange: onCreateListingModalOpenChange
   } = useDisclosure();
-
-
 
 
   const totalVolume = useCallback(() => {
@@ -264,12 +260,13 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
                   base: "min-h-[400px]",
                 }}
               >
-                  <OrderTable
-                    tick={params.name}
-                    shouldFetch={shouldFetchOrders}
-                    // @ts-ignore
-                    address={address} ethPrice={ethPrice?.data?.amount}
-                  />
+                <OrderTable
+                  tick={params.name}
+                  shouldFetch={shouldFetchOrders}
+                  // @ts-ignore
+                  address={address} ethPrice={ethPrice?.data?.amount}
+                  setParentRefetch={setShouldFetch}
+                />
               </Card>
             </Tab>
             <Tab
@@ -314,6 +311,7 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
                   address={address}
                   ethPrice={ethPrice?.data?.amount}
                   justSelf={true}
+                  setParentRefetch={setShouldFetch}
                 />
               </Card>
             </Tab>

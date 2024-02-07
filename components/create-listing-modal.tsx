@@ -1,4 +1,4 @@
-import React, { FC, useCallback, useMemo } from 'react';
+import React, { FC, useCallback, useEffect, useMemo } from 'react';
 import { Modal, ModalBody, ModalContent, ModalFooter, Select, SelectItem, Switch } from "@nextui-org/react";
 import { ModalHeader } from "@nextui-org/modal";
 import { Input } from "@nextui-org/input";
@@ -41,7 +41,22 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
   onOpenChange,
   tokenName
 }: CreateListingModalProps) => {
+
   const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+  const [canClose, setCanClose] = React.useState<boolean>(true);
+  useEffect(() => {
+    if (!canClose && isOpen) {
+      window.addEventListener("beforeunload", alertUser);
+      return () => {
+        window.removeEventListener("beforeunload", alertUser);
+      };
+    }
+  }, [canClose, isOpen]);
+  const alertUser = (e: any) => {
+    e.preventDefault();
+    e.returnValue = "";
+  };
 
   const [amount, setAmount] = React.useState<string>("");
   const [isAmountInvalid, setIsAmountInvalid] = React.useState<boolean>(false);
@@ -223,6 +238,7 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
     }
 
     setConfirming(true);
+    setCanClose(false);
 
     const transferData = formListInput({
       tick: tokenName,
@@ -322,6 +338,7 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
               .finally(() => {
                 setConfirmingText("Confirming...")
                 setConfirming(false);
+                setCanClose(true);
               })
 
           })
@@ -354,7 +371,15 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
 
   return (
     <div>
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} backdrop="blur" size="lg">
+      <Modal
+        isOpen={isOpen}
+        onOpenChange={onOpenChange}
+        isDismissable={canClose}
+        isKeyboardDismissDisabled={canClose}
+        hideCloseButton={!canClose}
+        backdrop="blur"
+        size="lg"
+      >
         <ModalContent>
           {(onClose) => (
             <>
