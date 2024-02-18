@@ -149,7 +149,7 @@ const OrderTable = (props: OrderTableProps) => {
               size="lg"
               selectedKey={orderType}
               onSelectionChange={(selection) => {
-                setOrderType(selection)
+                setOrderType(selection.toString())
               }}
               className={"font-mono font-bold"}
             >
@@ -174,7 +174,7 @@ const OrderTable = (props: OrderTableProps) => {
           size="lg"
           selectedKey={orderType}
           onSelectionChange={(selection) => {
-            setOrderType(selection)
+            setOrderType(selection.toString())
           }}
           className={"font-mono font-bold"}
         >
@@ -227,7 +227,10 @@ const OrderTable = (props: OrderTableProps) => {
     </div>
 
 
-  }, [orderLoading, orderValidating, orderDataErr, orderItems, currentPage, totalPage, props]);
+  }, [
+    orderLoading, orderValidating, orderDataErr, orderItems, currentPage,
+    totalPage, props, orderType
+  ]);
 };
 
 export default OrderTable;

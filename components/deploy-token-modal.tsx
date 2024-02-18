@@ -257,7 +257,7 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
 
   }, [
     address, decimals, deployDisabled, duration, isConnected, isDisconnected,
-    limitPerMint, onOpenChange, signer, startBlock, tick, totalSupply
+    limitPerMint, onOpenChange, signer, startBlock, tick, totalSupply, selectedOption
   ])
 
   const tickInputEndContent = useMemo(() => {

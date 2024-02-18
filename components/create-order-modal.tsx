@@ -119,17 +119,17 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
     return new Intl.NumberFormat('en-US').format(Number(unitPrice) * Number(ethPrice))
   }
 
-  const getEstimateTotalPrice = (amount: string, unitPrice: string, ethPrice: string) => {
+  const getEstimateTotalPrice = (amount: any, unitPrice: string, ethPrice: string) => {
     return new Intl.NumberFormat('en-US').format(Number(amount) * Number(unitPrice) * Number(ethPrice))
   }
 
-  const getEstimateTotalInEth = (amount: string, unitPrice: string) => {
+  const getEstimateTotalInEth = (amount: any, unitPrice: string) => {
     return new Intl.NumberFormat('en-US', {
       maximumFractionDigits: 10
     }).format(Number(amount) * Number(unitPrice))
   }
 
-  const getEstimateTotalInUsd = (amount: string, unitPrice: string, ethPrice: string) => {
+  const getEstimateTotalInUsd = (amount: any, unitPrice: string, ethPrice: string) => {
     return new Intl.NumberFormat('en-US', {
       maximumFractionDigits: 10
     }).format(Number(amount) * Number(unitPrice) * Number(ethPrice))
@@ -307,7 +307,7 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
         }
       </div>
     )
-  }, [orderType, amount, unitPrice, ethPrice, liquidityRewardAmount, tokenName])
+  }, [orderType, amount, unitPrice, ethPrice, liquidityRewardAmount, tokenName, revenueAmount])
 
   const isConfirmDisabled = useMemo(() => {
     return isAmountInvalid || isUnitPriceInvalid || amount === "" || unitPrice === "" || Number(amount) <= 0 || Number(unitPrice) <= 0;
@@ -471,7 +471,7 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
   }, [
     isConnected, isDisconnected, signer, isConfirmDisabled, tokenName,
     amount, chain, durationSelected, address, unitPrice, onOpenChange,
-    mutate, ordersEpStart
+    mutate, ordersEpStart, orderType
   ]);
 
   return (
@@ -503,7 +503,7 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
                         size="md"
                         selectedKey={orderType}
                         onSelectionChange={(selection) => {
-                          setOrderType(selection)
+                          setOrderType(selection.toString())
                           onAmountChange("")
                         }}
                         className={"font-mono font-bold"}

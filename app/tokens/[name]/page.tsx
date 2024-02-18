@@ -270,7 +270,7 @@ export default function TokenDetailPage({params}: { params: { name: string } }) 
       default:
         return cellValue;
     }
-  }, [tokenData?.total_supply]);
+  }, [tokenData]);
 
   // TODO: fix duplicate histories in backend
   const renderTxsCell = useCallback((item: any, columnKey: React.Key) => {
