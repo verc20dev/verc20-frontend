@@ -15,6 +15,7 @@ export default function Home() {
             <span className="text-red-400">Revitalizing</span> Ethereum Inscription Trading&nbsp;<br/><br/>
             <span><span className="text-green-500">30%</span> Less Gas Costs</span>&nbsp;<br/>
             <span>Real <span className="text-yellow-400">Fair</span> Mode</span>&nbsp;<br/>
+            <span><span className="text-blue-400">Ask-Bid</span> Marketplace</span>&nbsp;<br/>
             <span>Heightened <span className="text-blue-800">Security</span></span>&nbsp;
           </h2>
           <div className="mt-8 gap-8">

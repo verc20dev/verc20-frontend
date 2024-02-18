@@ -448,7 +448,8 @@ const ListingCard = (props: ListingCardProps) => {
       </Button>
     )
 
-    if (userTokenBalance) {
+    // only check user token balance if it's a bid order
+    if (userTokenBalance && !props.sell) {
       if (Number(userTokenBalance) < Number(props.quantity)) {
         takeButton = (
           <Tooltip content="Insufficient Token balance">
