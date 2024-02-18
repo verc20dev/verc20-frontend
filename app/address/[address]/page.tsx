@@ -144,6 +144,10 @@ export default function AddressDetailPage({params}: { params: { address: string 
     if (txsData === undefined) {
       return []
     }
+
+    if (txsData.data === undefined) {
+      return []
+    }
     return txsData.data
   }, [txsData])
 
