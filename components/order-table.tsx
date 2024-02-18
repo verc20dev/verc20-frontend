@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { API_ENDPOINT } from "@/config/constants";
 import { Spinner } from "@nextui-org/spinner";
 import ListingCard from "@/components/listing-card";
-import { Pagination } from "@nextui-org/react";
+import { Pagination, Tab, Tabs } from "@nextui-org/react";
 
 
 export interface OrderTableProps {
@@ -13,6 +13,8 @@ export interface OrderTableProps {
   ethPrice: string
   justSelf?: boolean
   setParentRefetch?: (refetch: boolean) => void
+  type: string
+  displayTypeToggle?: boolean
 }
 
 const formTokensQueryParam = (
@@ -51,6 +53,8 @@ const OrderTable = (props: OrderTableProps) => {
     return r.json()
   })
 
+  const [orderType, setOrderType] = React.useState<string>("ask");
+
   const [offset, setOffset] = useState<number | undefined>(0);
   const [limit, setLimit] = useState<number | undefined>();
   const [sort, setSort] = useState<string | undefined>();
@@ -60,6 +64,11 @@ const OrderTable = (props: OrderTableProps) => {
   const [totalPage, setTotalPage] = useState(1);
 
   let ordersEp = `${API_ENDPOINT}/market/orders?tick=${props.tick}`
+  if (props.displayTypeToggle) {
+    ordersEp = `${ordersEp}&type=${orderType}`
+  } else {
+    ordersEp = `${ordersEp}&type=${props.type}`
+  }
   const queryParam = formTokensQueryParam(offset, limit, sort, order)
   if (queryParam !== undefined) {
     ordersEp = `${ordersEp}&${queryParam}`
@@ -107,7 +116,8 @@ const OrderTable = (props: OrderTableProps) => {
         endTime: item.expiration_time,
         owner: item.owner,
         input: item.input,
-        signature: item.signature
+        signature: item.signature,
+        sell: item.sell
       }
     })
   }, [orderData])
@@ -131,13 +141,48 @@ const OrderTable = (props: OrderTableProps) => {
 
     if (orderItems.length === 0) {
       return (
-        <div className="flex justify-center items-center h-96">
-          <p className="text-sm text-gray-400">No order found</p>
+        <div className="w-full">
+          {props.displayTypeToggle && <div className="flex justify-start ml-4 my-4">
+            <Tabs
+              key={"success"}
+              color={"success"}
+              size="lg"
+              selectedKey={orderType}
+              onSelectionChange={(selection) => {
+                setOrderType(selection)
+              }}
+              className={"font-mono font-bold"}
+            >
+              <Tab key={"ask"} title="Ask"/>
+              <Tab key={"bid"} title="Bid"/>
+            </Tabs>
+          </div>
+          }
+          <div className="flex justify-center items-center h-96">
+            <p className="text-sm text-gray-400">No orders found</p>
+          </div>
         </div>
+
       )
     }
 
     return <div className="w-full">
+      {props.displayTypeToggle && <div className="flex justify-start ml-4 my-4">
+        <Tabs
+          key={"success"}
+          color={"success"}
+          size="lg"
+          selectedKey={orderType}
+          onSelectionChange={(selection) => {
+            setOrderType(selection)
+          }}
+          className={"font-mono font-bold"}
+        >
+          <Tab key={"ask"} title="Ask"/>
+          <Tab key={"bid"} title="Bid"/>
+        </Tabs>
+      </div>
+      }
       <div
         className="w-full p-2 sm:p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {
@@ -158,6 +203,7 @@ const OrderTable = (props: OrderTableProps) => {
                 address={props.address}
                 signature={item.signature}
                 setParentRefetch={props.setParentRefetch}
+                sell={item.sell}
               />
             )
           })

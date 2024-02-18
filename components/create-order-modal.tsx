@@ -1,5 +1,5 @@
 import React, { FC, useCallback, useEffect, useMemo } from 'react';
-import { Modal, ModalBody, ModalContent, ModalFooter, Select, SelectItem, Switch } from "@nextui-org/react";
+import { Modal, ModalBody, ModalContent, ModalFooter, Select, SelectItem, Switch, Tab, Tabs } from "@nextui-org/react";
 import { ModalHeader } from "@nextui-org/modal";
 import { Input } from "@nextui-org/input";
 import { Button } from "@nextui-org/button";
@@ -7,40 +7,33 @@ import { CloseIcon } from "@nextui-org/shared-icons";
 import useSWR, { useSWRConfig } from "swr";
 import {
   API_ENDPOINT,
-  ETH_PRICE_ENDPOINT,
+  ETH_PRICE_ENDPOINT, LIQUIDITY_REWARD_RATE,
   MARKET_CONTRACT_ADDRESS,
   MARKET_CONTRACT_DOMAIN,
-  MARKET_CONTRACT_ORDER_TYPES
+  MARKET_CONTRACT_ORDER_TYPES, PROTOCOL_FEE_RATE
 } from "@/config/constants";
 import useSWRMutation from "swr/mutation";
-import { useAccount, useNetwork } from "wagmi";
+import { useAccount, useBalance, useNetwork } from "wagmi";
 import { useEthersSigner } from "@/hook/ethers";
 import { enqueueSnackbar } from "notistack";
 import { formListInput } from "@/utils/tx-message";
 import { getBigInt } from "ethers";
 import { formatEther, parseEther } from "viem";
 import { Spinner } from "@nextui-org/spinner";
+import { Int } from "@solana/buffer-layout";
 
 
-export interface CreateListingModalProps {
+export interface CreateOrderModalProps {
   isOpen: boolean;
   onOpenChange?: (open: boolean) => void;
   tokenName: string;
 }
 
-async function createOrder(url: string, {arg}: { arg: any }) {
-  await fetch(url, {
-    method: 'POST',
-    body: JSON.stringify(arg)
-  })
-}
-
-
-const CreateListingModal: FC<CreateListingModalProps> = ({
+const CreateOrderModal: FC<CreateOrderModalProps> = ({
   isOpen,
   onOpenChange,
   tokenName
-}: CreateListingModalProps) => {
+}: CreateOrderModalProps) => {
 
   const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -70,16 +63,21 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
   const [confirmingText, setConfirmingText] = React.useState<string>("Confirming...");
 
   const [durationSelected, setDurationSelected] = React.useState<string>("7D");
+  const [orderType, setOrderType] = React.useState<string>("ask");
 
   const {data: ethPrice, error: ethPriceError} = useSWR(ETH_PRICE_ENDPOINT, fetcher, {refreshInterval: 20000});
   const {address, isConnected, isDisconnected} = useAccount();
   const signer = useEthersSigner();
   const {chain} = useNetwork()
 
+  const {
+    data: ethBalance,
+    isError: ethBalanceIsError,
+    isLoading: ethBalanceIsLoading
+  } = useBalance({
+    address: address,
+  })
 
-  // const createOrderUrl = `${API_ENDPOINT}/market/orders`
-  // const {trigger: createOrderTrigger} = useSWRMutation(
-  //   createOrderUrl, createOrder, {throwOnError: false});
 
   const userBalanceUrl = `${API_ENDPOINT}/holders/${address}?tick=${tokenName}`
   const {data: userBalanceData, error: userBalanceError} = useSWR(userBalanceUrl, fetcher, {refreshInterval: 20000});
@@ -90,15 +88,25 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
     error: marketTokenDetailError
   } = useSWR(marketTokenDetailEp, fetcher, {refreshInterval: 20000});
 
-  const { mutate } = useSWRConfig()
+  const {mutate} = useSWRConfig()
   const ordersEpStart = `${API_ENDPOINT}/market/orders`
 
-  const userBalance = useMemo(() => {
+  const userTokenBalance = useMemo(() => {
     if (userBalanceData?.tokens?.length > 0) {
       return userBalanceData.tokens[0].balance;
     }
     return "0";
   }, [userBalanceData])
+
+  const userEthBalance = useMemo(() => {
+    const balanceString = ethBalance?.formatted
+    return new Intl.NumberFormat(
+      'en-US',
+      {
+        maximumFractionDigits: 4
+      }
+    ).format(Number(balanceString))
+  }, [ethBalance])
 
   const floorPrice = useMemo(() => {
     if (marketTokenDetailData !== undefined) {
@@ -121,13 +129,19 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
     }).format(Number(amount) * Number(unitPrice))
   }
 
-  const getEstimateRevenueInEth = (amount: string, unitPrice: string) => {
-    return new Intl.NumberFormat('en-US').format(Number(amount) * Number(unitPrice) * 0.98)
+  const getEstimateTotalInUsd = (amount: string, unitPrice: string, ethPrice: string) => {
+    return new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: 10
+    }).format(Number(amount) * Number(unitPrice) * Number(ethPrice))
   }
 
-  const getEstimateRevenueInUsd = (amount: string, unitPrice: string, ethPrice: string) => {
-    return new Intl.NumberFormat('en-US').format(Number(amount) * Number(unitPrice) * 0.98 * Number(ethPrice))
-  }
+  // const getEstimateRevenueInEth = (amount: string, unitPrice: string) => {
+  //   return new Intl.NumberFormat('en-US').format(Number(amount) * Number(unitPrice) * 0.98)
+  // }
+  //
+  // const getEstimateRevenueInUsd = (amount: string, unitPrice: string, ethPrice: string) => {
+  //   return new Intl.NumberFormat('en-US').format(Number(amount) * Number(unitPrice) * 0.98 * Number(ethPrice))
+  // }
 
   const onAmountChange = useCallback((value: string) => {
     setAmount(value);
@@ -146,6 +160,13 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
       return;
     }
 
+    // bid order have no amount limit
+    if (orderType === "bid") {
+      setIsAmountInvalid(false);
+      setAmountErrorText("");
+      return;
+    }
+
     let maxAmount = "0";
     if (userBalanceData?.tokens?.length > 0) {
       maxAmount = userBalanceData.tokens[0].balance;
@@ -159,7 +180,7 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
       setIsAmountInvalid(false);
       setAmountErrorText("");
     }
-  }, [userBalanceData])
+  }, [userBalanceData, orderType])
 
   const onUnitPriceChange = useCallback((value: string) => {
     setUnitPrice(value);
@@ -168,15 +189,41 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
     if (Number.isNaN(Number(value))) {
       setIsUnitPriceInvalid(true);
       setUnitPriceErrorText("Unit price must be a number");
+      return
     }
     if (Number(value) <= 0) {
       setIsUnitPriceInvalid(true);
       setUnitPriceErrorText("Unit price must be greater than 0");
+      return;
+    }
+
+    if (orderType === 'bid') {
+      // check if unit price > user eth balance
+      if (Number(value) > Number(userEthBalance)) {
+        setIsUnitPriceInvalid(true);
+        setUnitPriceErrorText("Unit price must be less than or equal to your max eth balance");
+        return;
+      }
+
+      // check if unit price * amount > user eth balance
+      if (Number(value) * Number(amount) > Number(userEthBalance)) {
+        setIsUnitPriceInvalid(true);
+        setUnitPriceErrorText("Total price must be less than or equal to your max eth balance");
+        return;
+      }
     }
 
     setIsUnitPriceInvalid(false);
     setUnitPriceErrorText("");
-  }, [])
+  }, [orderType, userEthBalance, amount])
+
+  const liquidityRewardAmount = useMemo(() => {
+    return Number(amount) * LIQUIDITY_REWARD_RATE;
+  }, [amount])
+
+  const revenueAmount = useMemo(() => {
+    return Number(amount) + liquidityRewardAmount
+  }, [amount, liquidityRewardAmount])
 
 
   const amountInputEndContent = useMemo(() => {
@@ -189,11 +236,13 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
       <Button size="sm" onPress={() => setAmount("")} isIconOnly radius="md">
         <CloseIcon/>
       </Button>
-      <Button size="sm" color="primary" onPress={() => setAmount(maxAmount)}>
-        <p className="font-bold">Max</p>
-      </Button>
+      {orderType === "ask" &&
+        <Button size="sm" color="primary" onPress={() => setAmount(maxAmount)}>
+          <p className="font-bold">Max</p>
+        </Button>
+      }
     </div>
-  }, [userBalanceData]);
+  }, [userBalanceData, orderType]);
 
   const unitPriceInputEndContent = useMemo(() => {
     return (
@@ -214,6 +263,51 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
       </div>
     )
   }, [ethPrice, floorPrice, unitPrice]);
+
+  const summarySection = useMemo(() => {
+    return (
+      <div className="flex flex-col gap-2 mt-4 rounded-md p-4 border-default border-2">
+        <div className="mt-2">
+          <p className="font-mono text-lg">Summary:</p>
+        </div>
+        {orderType === "bid" &&
+          <div>
+            <p className="font-mono text-medium mt-2">You will pay:</p>
+          </div>
+        }
+        <div className="flex justify-between items-start font-mono text-medium text-default-500">
+          <p>Order Value:</p>
+          <p>{getEstimateTotalInEth(amount, unitPrice)}&nbsp;ETH&nbsp;≈&nbsp;${getEstimateTotalInUsd(amount, unitPrice, ethPrice?.data?.amount)}</p>
+        </div>
+        {orderType === "bid" &&
+          <div>
+            <p className="font-mono text-medium mt-2">You will get:</p>
+          </div>
+        }
+
+        <div className="flex justify-between items-start font-mono text-medium text-default-500">
+          <p>Liquidity Reward:</p>
+          <p>{getEstimateTotalInEth(
+            liquidityRewardAmount,
+            unitPrice)}&nbsp;ETH&nbsp;≈&nbsp;${getEstimateTotalPrice(
+            liquidityRewardAmount, unitPrice, ethPrice?.data?.amount)}</p>
+        </div>
+
+        {orderType === "bid" &&
+          <div className="flex justify-between items-start font-mono text-medium text-default-500">
+            <p>Receive Token:</p>
+            <p>{amount}&nbsp;{tokenName}</p>
+          </div>
+        }
+        {orderType === "ask" &&
+          <div className="flex justify-between items-start font-mono text-medium text-default-500">
+            <p>Total Revenue:</p>
+            <p>{getEstimateTotalInEth(revenueAmount, unitPrice)}&nbsp;ETH&nbsp;≈&nbsp;${getEstimateTotalInUsd(revenueAmount, unitPrice, ethPrice?.data?.amount)}</p>
+          </div>
+        }
+      </div>
+    )
+  }, [orderType, amount, unitPrice, ethPrice, liquidityRewardAmount, tokenName])
 
   const isConfirmDisabled = useMemo(() => {
     return isAmountInvalid || isUnitPriceInvalid || amount === "" || unitPrice === "" || Number(amount) <= 0 || Number(unitPrice) <= 0;
@@ -245,11 +339,22 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
       amount: amount,
     });
 
+    let value = parseEther("0.0");
+    if (orderType === "bid") {
+      value = parseEther(getEstimateTotalInEth(amount, unitPrice));
+    }
+
     const tx = {
       to: MARKET_CONTRACT_ADDRESS,
-      value: parseEther("0.0"),
+      value: value,
       data: transferData,
+      // gasLimit: 200000,
     }
+
+    // if (orderType === "bid") {
+    //   tx.gasLimit = 200000
+    //   tx.gasPrice = parseEther("0.00000002")
+    // }
 
     signer.sendTransaction(tx)
       .then((tx) => {
@@ -279,7 +384,8 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
             }
             const durationInSeconds = 60 * 60 * 24 * days;
             const order = {
-              seller: address,
+              maker: address,
+              sell: orderType === "ask",
               listId: tx.hash,
               tick: tokenName,
               amount: getBigInt(amount).toString(),
@@ -300,7 +406,8 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
                   creation_time: nowInSeconds,
                   expiration_time: nowInSeconds + durationInSeconds,
                   signature: signature,
-                  input: JSON.stringify(order)
+                  input: JSON.stringify(order),
+                  sell: order.sell
                 }
 
                 fetch(`${API_ENDPOINT}/market/orders`, {
@@ -377,25 +484,59 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
         hideCloseButton={!canClose}
         backdrop="blur"
         size="lg"
+        scrollBehavior={"outside"}
       >
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1 font-bold text-center">Listing {tokenName}</ModalHeader>
+              <ModalHeader className="flex flex-col gap-1 font-bold text-center">
+                Create Order
+              </ModalHeader>
               <ModalBody>
-                <div className="flex flex-col gap-4 mt-4">
-                  {floorPrice !== undefined && floorPrice !== "" &&
-                    <div className="flex justify-between items-start font-mono">
-                      Floor: <span
-                      className="font-bold">{formatEther(getBigInt(floorPrice))}&nbsp;ETH&nbsp;≈&nbsp;${getEstimateUnitPrice(formatEther(getBigInt(floorPrice)), ethPrice?.data?.amount)}</span>
+                <div className="flex flex-col sm:gap-4 sm:mt-4">
+                  <div className="flex flex-col sm:gap-4 gap-2 rounded-md sm:p-4 p-2 border-default border-2">
+                    <div className="flex flex-row justify-between items-center font-mono">
+                      <p>Order Type:</p>
+                      <Tabs
+                        key={"success"}
+                        color={"success"}
+                        size="md"
+                        selectedKey={orderType}
+                        onSelectionChange={(selection) => {
+                          setOrderType(selection)
+                          onAmountChange("")
+                        }}
+                        className={"font-mono font-bold"}
+                      >
+                        <Tab key={"ask"} title="Ask"/>
+                        <Tab key={"bid"} title="Bid"/>
+                      </Tabs>
                     </div>
-                  }
-                  <div className="flex justify-between items-start font-mono">
-                    Balance: <span className="font-bold">{userBalance}&nbsp;{tokenName}</span>
+                    {floorPrice !== undefined && floorPrice !== "" &&
+                      <div className="flex justify-between items-start font-mono">
+                        Floor: <span
+                        className="font-bold">{formatEther(getBigInt(floorPrice))}&nbsp;ETH&nbsp;≈&nbsp;${getEstimateUnitPrice(formatEther(getBigInt(floorPrice)), ethPrice?.data?.amount)}</span>
+                      </div>
+                    }
+                    {orderType === "ask" ?
+                      <div className="flex justify-between items-start font-mono">
+                        Balance: <span className="font-bold">{userTokenBalance}&nbsp;{tokenName}</span>
+                      </div>
+                      :
+                      <div className="flex justify-between items-start font-mono">
+                        Balance: <span className="font-bold">{userEthBalance}&nbsp;ETH</span>
+                      </div>
+                    }
+                    <div className="flex justify-between items-start font-mono">
+                      <p>Liquidity Reward Rate:</p>
+                      <p>{new Intl.NumberFormat('en-US', {
+                        style: 'percent',
+                        maximumFractionDigits: 2
+                      }).format(LIQUIDITY_REWARD_RATE)}</p>
+                    </div>
                   </div>
 
-
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start mt-2 sm:mt-0">
                     <Input
                       label="Amount"
                       labelPlacement={"outside"}
@@ -412,7 +553,7 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
                       endContent={amountInputEndContent}
                     />
                   </div>
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start mt-2 sm:mt-0">
                     <Input
                       label="Unit Price"
                       labelPlacement={"outside"}
@@ -429,7 +570,7 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
                       endContent={unitPriceInputEndContent}
                     />
                   </div>
-                  <div className="flex items-center">
+                  <div className="flex items-center mt-2 sm:mt-0">
                     <Select
                       labelPlacement={"outside"}
                       label="Expires&nbsp;in"
@@ -457,18 +598,7 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
                       </SelectItem>
                     </Select>
                   </div>
-                  <div className="flex justify-between items-start font-mono text-medium text-default-500 mt-4">
-                    <p>Total Price:</p>
-                    <p>{getEstimateTotalInEth(amount, unitPrice)}&nbsp;ETH&nbsp;≈&nbsp;${getEstimateTotalPrice(amount, unitPrice, ethPrice?.data?.amount)}</p>
-                  </div>
-                  <div className="flex justify-between items-start font-mono text-medium text-default-500">
-                    <p>Service Fee:</p>
-                    <p>2%</p>
-                  </div>
-                  <div className="flex justify-between items-start font-mono text-medium text-default-500">
-                    <p>Total Revenue:</p>
-                    <p>{getEstimateRevenueInEth(amount, unitPrice)}&nbsp;ETH&nbsp;≈&nbsp;${getEstimateRevenueInUsd(amount, unitPrice, ethPrice?.data?.amount)}</p>
-                  </div>
+                  {summarySection}
                 </div>
               </ModalBody>
               <ModalFooter>
@@ -498,4 +628,4 @@ const CreateListingModal: FC<CreateListingModalProps> = ({
   );
 };
 
-export default CreateListingModal;
+export default CreateOrderModal;

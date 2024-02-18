@@ -3,18 +3,30 @@
 import { Link } from "@nextui-org/link";
 import { BackIcon, OutSiteIcon, SearchIcon } from "@/components/icons";
 import { notFound, useRouter } from "next/navigation";
-import { Tooltip, Tabs, Tab, Chip, Card, Pagination } from "@nextui-org/react";
+import {
+  Tooltip,
+  Tabs,
+  Tab,
+  Chip,
+  Card,
+  Pagination,
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody, TableRow, TableCell
+} from "@nextui-org/react";
 import { Button } from "@nextui-org/button";
 import { enqueueSnackbar } from "notistack";
 import { HoldingCard } from "@/components/holding-card";
 import { OfficialBadge, OGBadge, VerifiedBadge } from "@/components/badges";
 import { Input } from "@nextui-org/input";
-import { useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { BlockiesAvatar } from "@/components/blockies-avatar";
-import { API_ENDPOINT } from "@/config/constants";
+import { API_ENDPOINT, BLOCK_EXPLORER_URL } from "@/config/constants";
 import useSWR from "swr";
 import { Spinner } from "@nextui-org/spinner";
 import { useEthersSigner } from "@/hook/ethers";
+import ActivityTable from "@/components/activity-table";
 
 const displayName = (address: string): string => {
   // check if address is valid
@@ -113,18 +125,124 @@ export default function AddressDetailPage({params}: { params: { address: string 
   }
 
   const {data, error, isLoading, isValidating} = useSWR(holdingsEp, fetcher)
-  let items = []
   if (error) {
     enqueueSnackbar('Error while fetching balance data', {variant: 'error'})
     console.log(error)
   }
 
-  if (data?.tokens) {
-    items = data.tokens.map((token: any) => ({
-      name: token.name,
-      balance: token.balance,
-    }))
+  // request transactions
+  const [txsOffset, setTxsOffset] = useState<number | undefined>();
+  const txsEp = `${API_ENDPOINT}/holders/${params.address}/histories`
+  const txsQueryParam = formQueryParam(txsOffset, 10, undefined, undefined)
+  let txsEpWithParam = txsEp
+  if (txsQueryParam !== undefined) {
+    txsEpWithParam = `${txsEpWithParam}?${txsQueryParam}`
   }
+  const {data: txsData, error: txsErr, isLoading: txsLoading} = useSWR(txsEpWithParam, fetcher)
+
+  const txsItems = useMemo(() => {
+    if (txsData === undefined) {
+      return []
+    }
+    return txsData.data
+  }, [txsData])
+
+  const txsItemsTotal = useMemo(() => {
+    if (txsData === undefined) {
+      return 0
+    }
+    return txsData.total
+  }, [txsData])
+
+  const renderTxsCell = useCallback((item: any, columnKey: React.Key) => {
+    const cellValue = item[columnKey as keyof any];
+
+    switch (columnKey) {
+      case "tick":
+        return (
+          <div className="flex gap-2 items-center justify-center">
+            <Link
+              underline="hover"
+              className="text-2xl font-bold font-sans-mono"
+              href={`/tokens/${item.name}`}
+            >
+              {item.name}
+            </Link>
+          </div>
+        )
+      case "quantity": {
+        let res = new Intl.NumberFormat('en-US').format(Number(item.quantity));
+        if (res === 'NaN') {
+          res = '-'
+        }
+        return res
+      }
+      case "from":
+      case "to":
+        return (
+          <Tooltip
+            showArrow
+            placement="top"
+            content={cellValue}
+            classNames={{
+              base: [
+                // arrow color
+                "before:bg-neutral-400 dark:before:bg-white",
+              ],
+              content: [
+                "py-2 px-4 shadow-xl font-mono",
+                "text-black bg-gradient-to-br from-white to-neutral-400",
+              ],
+            }}
+          >
+            <Link
+              underline="always"
+              className="text-sm cursor-pointer"
+              href={`/address/${cellValue}`}
+            >
+              {shorten(cellValue)}
+            </Link>
+          </Tooltip>
+        );
+      case "time":
+        return new Date(item['created_at'] * 1000).toLocaleString()
+      case "hash":
+        return (
+          <Link
+            underline="always"
+            isExternal={true}
+            showAnchorIcon={true}
+            className="text-sm cursor-pointer"
+            href={`${BLOCK_EXPLORER_URL}/tx/${item.creation_tx}`}
+          />
+        );
+
+      default:
+        return cellValue;
+    }
+  }, []);
+
+
+  const items = useMemo(() => {
+
+    console.log('data', data)
+
+    if (data === undefined) return []
+    if (data.tokens === undefined) return []
+
+    return data.tokens.map((token: any) => {
+      const badges = []
+      if (token.isOfficial) badges.push(OfficialBadge)
+      if (token.isOG) badges.push(OGBadge)
+      if (token.isVerified) badges.push(VerifiedBadge)
+
+      return {
+        name: token.name,
+        balance: token.balance,
+        badges: badges,
+      }
+    })
+  }, [data])
 
 
   if (!params.address || !params.address.startsWith('0x')) {
@@ -279,7 +397,57 @@ export default function AddressDetailPage({params}: { params: { address: string 
                   <span>Activity</span>
                 </div>
               }
-            />
+            >
+              <Table
+                aria-label="vERC-20 transactions"
+                bottomContent={
+                  <div className="flex w-full justify-center">
+                    <Pagination
+                      isCompact
+                      showControls
+                      showShadow
+                      color="secondary"
+                      page={txsOffset ? txsOffset + 1 : 1}
+                      total={txsItemsTotal}
+                      initialPage={1}
+                      onChange={(page) => setTxsOffset(page - 1)}
+                    />
+                  </div>
+                }
+                classNames={{
+                  wrapper: "min-h-[300px]",
+                  th: "text-center",
+                  td: "text-center",
+                }}
+                className="font-mono"
+                selectionMode="single"
+              >
+                <TableHeader>
+                  <TableColumn key="tick">Tick</TableColumn>
+                  <TableColumn key="method">Method</TableColumn>
+                  <TableColumn key="quantity">Quantity</TableColumn>
+                  <TableColumn key="from">From</TableColumn>
+                  <TableColumn key="to">To</TableColumn>
+                  <TableColumn key="time">Date Time</TableColumn>
+                  <TableColumn key="hash">Hash</TableColumn>
+                </TableHeader>
+                <TableBody
+                  items={txsItems}
+                  isLoading={txsLoading}
+                  loadingContent={<Spinner size="lg" label="Loading..."/>}
+                >
+                  {(item: any) => (
+                    <TableRow key={item['creation_tx']}>
+                      {(columnKey) => <TableCell
+                        key={`${item['creation_tx']}-${columnKey}`}
+                      >
+                        {renderTxsCell(item, columnKey)}
+                      </TableCell>}
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </Tab>
           </Tabs>
         </div>
 

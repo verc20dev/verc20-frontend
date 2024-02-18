@@ -2,7 +2,7 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import { Button } from "@nextui-org/button";
-import CreateListingModal from "@/components/create-listing-modal";
+import CreateOrderModal from "@/components/create-order-modal";
 import {
   Card, Tab, Tabs, useDisclosure, Table,
   TableHeader,

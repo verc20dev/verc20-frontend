@@ -1,6 +1,5 @@
 import { Button } from "@nextui-org/button";
 import { Image } from "@nextui-org/react";
-import { useRouter } from "next/navigation";
 import { Link } from "@nextui-org/link";
 import { siteConfig } from "@/config/site";
 

@@ -28,23 +28,25 @@ import { Link } from "@nextui-org/link";
 import { Button } from "@nextui-org/button";
 import { Divider } from "@nextui-org/divider";
 import { useRouter } from "next/navigation";
+import useScreenSize from "@/hook/screen-size";
 
 export const Navbar = () => {
   const [searchValue, setSearchValue] = useState("");
   const router = useRouter();
+  const screenSize = useScreenSize();
 
   return (
     <NextUINavbar maxWidth="full" position="sticky" className="px-0">
       <NavbarContent justify="start">
         <NavbarMenuToggle
           aria-label="menu toggle"
-          className="sm:hidden"
+          className="lg:hidden"
         />
         <NavbarBrand as="li" className="max-w-fit">
           <NextLink className="flex justify-start items-center gap-1" href="/">
-            <div>
-              <Logo/>
-            </div>
+            <Logo
+              size={screenSize.width > 768 ? 36 : 24}
+            />
             <p className="font-bold text-inherit">vERC-20</p>
           </NextLink>
         </NavbarBrand>
@@ -139,39 +141,42 @@ export const Navbar = () => {
           ))}
           <Divider/>
           <NavbarMenuItem>
-            <div className="flex w-full justify-between px-5 mt-4">
-              <Link
-                color="foreground"
-                href="https://discord.gg/4a8kWUz9"
-                size="lg"
-                target="_blank"
-              >
-                <DiscordIcon size={30}/>
-              </Link>
-              <Link
-                color="foreground"
-                href="https://discord.gg/4a8kWUz9"
-                size="lg"
-                target="_blank"
-              >
-                <TwitterIcon size={30}/>
-              </Link>
-              <Link
-                color="foreground"
-                href="https://discord.gg/4a8kWUz9"
-                size="lg"
-                target="_blank"
-              >
-                <GitBookIcon size={30}/>
-              </Link>
-              <Link
-                color="foreground"
-                href="https://discord.gg/4a8kWUz9"
-                size="lg"
-                target="_blank"
-              >
-                <GithubIcon size={30}/>
-              </Link>
+            <div className="flex w-full justify-center px-5 mt-4">
+              <div className="flex flex-row gap-8">
+                <Link
+                  color="foreground"
+                  href="https://discord.gg/4a8kWUz9"
+                  size="lg"
+                  target="_blank"
+                >
+                  <DiscordIcon size={30}/>
+                </Link>
+                <Link
+                  color="foreground"
+                  href="https://discord.gg/4a8kWUz9"
+                  size="lg"
+                  target="_blank"
+                >
+                  <TwitterIcon size={30}/>
+                </Link>
+                <Link
+                  color="foreground"
+                  href="https://discord.gg/4a8kWUz9"
+                  size="lg"
+                  target="_blank"
+                >
+                  <GitBookIcon size={30}/>
+                </Link>
+                <Link
+                  color="foreground"
+                  href="https://discord.gg/4a8kWUz9"
+                  size="lg"
+                  target="_blank"
+                >
+                  <GithubIcon size={30}/>
+                </Link>
+              </div>
+
             </div>
 
           </NavbarMenuItem>

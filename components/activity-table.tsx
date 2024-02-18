@@ -190,7 +190,7 @@ const ActivityTable = (props: ActivityTableProps) => {
       default:
         return cellValue
     }
-  }, [])
+  }, [props.ethPrice])
 
   const tableCellClassname = (key: string) => {
     switch (key) {

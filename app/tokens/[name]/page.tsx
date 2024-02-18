@@ -22,7 +22,7 @@ import { ArrowRightIcon } from "@nextui-org/shared-icons";
 import useScreenSize from "@/hook/screen-size";
 import { Tabs, Tab } from "@nextui-org/react";
 import { Spinner } from "@nextui-org/spinner";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { MintTokenModal } from "@/components/mint-modal";
 import { TransferTokenModal } from "@/components/transfer-modal";
 import { useBlockNumber } from "wagmi";
@@ -42,7 +42,11 @@ const formPaginationParam = (
 ): string | undefined => {
   const queryParams: string[] = [];
   if (offset !== undefined) {
-    queryParams.push(`offset=${offset}`);
+    let pageSize = 5;
+    if (limit !== undefined) {
+      pageSize = limit;
+    }
+    queryParams.push(`offset=${offset * pageSize}`);
   }
   if (limit !== undefined) {
     queryParams.push(`limit=${limit}`);
@@ -110,6 +114,20 @@ export default function TokenDetailPage({params}: { params: { name: string } }) 
     txsEpWithParam = `${txsEpWithParam}?${txsQueryParam}`
   }
   const {data: txsData, error: txsErr, isLoading: txsLoading} = useSWR(txsEpWithParam, fetcher)
+
+  const txsItems = useMemo(() => {
+    if (txsData === undefined) {
+      return []
+    }
+    return txsData.data
+  }, [txsData])
+
+  const txsItemsTotal = useMemo(() => {
+    if (txsData === undefined) {
+      return 0
+    }
+    return txsData.total
+  }, [txsData])
 
   const {data: currentBlockData, isError, isLoading} = useBlockNumber({
     watch: true,
@@ -224,13 +242,18 @@ export default function TokenDetailPage({params}: { params: { name: string } }) 
             {window.innerWidth < 768 ? shorten(cellValue) : cellValue}
           </Link>
         );
-      case "percentage":
+      case "percentage": {
+        let progress = Number(item.balance) / Number(tokenData?.total_supply) * 100
+        if (tokenData?.type == 'fair') {
+          progress = Number(item.balance) / Number(tokenData?.minted) * 100
+        }
+
         return <Progress
           aria-label="progress"
           showValueLabel={true}
           size="sm"
           isStriped
-          value={Number(item.balance) / Number(tokenData?.total_supply) * 100}
+          value={progress}
           classNames={{
             value: "text-xs",
             labelWrapper: "!justify-center",
@@ -241,6 +264,7 @@ export default function TokenDetailPage({params}: { params: { name: string } }) 
             style: "percent",
           }}
         />;
+      }
       case "quantity":
         return new Intl.NumberFormat('en-US').format(Number(item.balance));
       default:
@@ -296,6 +320,7 @@ export default function TokenDetailPage({params}: { params: { name: string } }) 
             isExternal={true}
             showAnchorIcon={true}
             className="text-sm cursor-pointer"
+            href={`${BLOCK_EXPLORER_URL}/tx/${item.creation_tx}`}
           />
         );
 
@@ -320,11 +345,46 @@ export default function TokenDetailPage({params}: { params: { name: string } }) 
     return deployTxText
   }, [tokenData])
 
+  const maxSupplyStr = useMemo(() => {
+    if (tokenData === undefined) {
+      return '-'
+    }
+    // check if total supply larger than 0
+    if (tokenData.total_supply === "0") {
+      return '-'
+    }
+    return new Intl.NumberFormat('en-US').format(tokenData.total_supply)
+  }, [tokenData])
+
+  const typeComponent = useMemo(() => {
+    if (tokenData === undefined) {
+      return '-'
+    }
+
+    const baseClassname = "font-bold px-2 py-0.5 rounded-md"
+    let className = baseClassname
+    if (tokenData.type === 'fair') {
+      className = baseClassname + " bg-green-500 text-black"
+    } else {
+      className = baseClassname + " bg-default-300"
+    }
+
+    return (
+      <div className={className}>{tokenData.type}</div>
+    )
+  }, [tokenData])
+
+  const haveMaxSupply = useMemo(() => {
+    if (tokenData === undefined) {
+      return false
+    }
+    return tokenData.total_supply !== "0"
+  }, [tokenData])
+
   // if token not found, redirect to 404
   if (tokenDataErr) {
     return notFound()
   }
-
 
   let progress = 0
   if (tokenData) {
@@ -374,7 +434,7 @@ export default function TokenDetailPage({params}: { params: { name: string } }) 
               text={getTimerText()}
             />
           }
-          <Progress
+          {haveMaxSupply && <Progress
             aria-label="progress"
             isStriped
             value={progress}
@@ -388,7 +448,7 @@ export default function TokenDetailPage({params}: { params: { name: string } }) 
               maximumFractionDigits: 4,
               style: "percent",
             }}
-          />
+          />}
         </div>
 
         <Card className="max-w-full mt-4">
@@ -420,8 +480,12 @@ export default function TokenDetailPage({params}: { params: { name: string } }) 
           <Divider/>
           <CardBody className="gap-4 font-mono">
             <div className="flex justify-between">
-              <p className="text-sm">Total Supply</p>
-              <p className="text-sm">{new Intl.NumberFormat('en-US').format(tokenData?.total_supply)}</p>
+              <p className="text-sm">Type</p>
+              {typeComponent}
+            </div>
+            <div className="flex justify-between">
+              <p className="text-sm">Max Supply</p>
+              <p className="text-sm">{maxSupplyStr}</p>
             </div>
             <div className="flex justify-between">
               <p className="text-sm">Decimals</p>
@@ -562,7 +626,7 @@ export default function TokenDetailPage({params}: { params: { name: string } }) 
                     showShadow
                     color="secondary"
                     page={txsOffset ? txsOffset + 1 : 1}
-                    total={txsData?.total}
+                    total={txsItemsTotal}
                     initialPage={1}
                     onChange={(page) => setTxsOffset(page - 1)}
                   />
@@ -585,13 +649,17 @@ export default function TokenDetailPage({params}: { params: { name: string } }) 
                 <TableColumn key="hash">Hash</TableColumn>
               </TableHeader>
               <TableBody
-                items={txsData?.data || []}
+                items={txsItems}
                 isLoading={txsLoading}
                 loadingContent={<Spinner size="lg" label="Loading..."/>}
               >
                 {(item: any) => (
                   <TableRow key={item['creation_tx']}>
-                    {(columnKey) => <TableCell>{renderTxsCell(item, columnKey)}</TableCell>}
+                    {(columnKey) => <TableCell
+                      key={`${item['creation_tx']}-${columnKey}`}
+                    >
+                      {renderTxsCell(item, columnKey)}
+                    </TableCell>}
                   </TableRow>
                 )}
               </TableBody>

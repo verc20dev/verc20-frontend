@@ -14,7 +14,7 @@ import { Link } from "@nextui-org/link";
 import { useAccount, useSendTransaction, usePrepareSendTransaction } from 'wagmi'
 import { parseEther } from "viem";
 import { useEthersSigner } from "@/hook/ethers";
-import { formDeployInput } from "@/utils/tx-message";
+import { DeployInput, formDeployInput } from "@/utils/tx-message";
 import { enqueueSnackbar } from "notistack";
 import { Spinner } from "@nextui-org/spinner";
 import { API_ENDPOINT } from "@/config/constants";
@@ -39,7 +39,6 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
   const [startBlock, setStartBlock] = useState("");
   const [duration, setDuration] = useState("");
 
-  // todo: validate tick
   const [isTickInvalid, setIsTickInvalid] = useState(false);
   const [isDecimalsInvalid, setIsDecimalsInvalid] = useState(false);
   const [isTotalSupplyInvalid, setIsTotalSupplyInvalid] = useState(false);
@@ -102,12 +101,18 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
   const onTotalSupplyChange = useCallback((value: string) => {
     setTotalSupply(value);
     const numericValue = Number(value);
-    if (isNaN(numericValue) || numericValue <= 0) {
+    if (isNaN(numericValue)) {
       setIsTotalSupplyInvalid(true);
       return;
     }
+
+    if (selectedOption !== 'fair' && numericValue <= 0) {
+      setIsTotalSupplyInvalid(true);
+      return;
+    }
+
     setIsTotalSupplyInvalid(false);
-  }, []);
+  }, [selectedOption]);
 
   const onLimitPerMintChange = useCallback((value: string) => {
     setLimitPerMint(value);
@@ -121,8 +126,16 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
       setIsLimitPerMintInvalid(true);
       return;
     }
+
+    if (!isNaN(Number(totalSupply)) && Number(totalSupply) > 0) {
+      if (numericValue > Number(totalSupply)) {
+        setIsLimitPerMintInvalid(true);
+        return;
+      }
+    }
+
     setIsLimitPerMintInvalid(false);
-  }, []);
+  }, [totalSupply]);
 
   const onStartBlockChange = useCallback((value: string) => {
     setStartBlock(value);
@@ -201,14 +214,21 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
       return;
     }
 
-    const inputData = formDeployInput({
+    const inputStruct: DeployInput = {
       tick: tick,
       decimals: decimals,
       totalSupply: totalSupply,
       limit: limitPerMint,
       startBlock: startBlock,
       duration: duration,
-    });
+    }
+
+    if (selectedOption === 'fair') {
+      inputStruct.type = 'fair'
+    }
+
+    const inputData = formDeployInput(inputStruct);
+
 
     const tx = {
       to: address,
@@ -339,14 +359,14 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
                   </div>
                   {(selectedOption !== 'fair') && <div className="flex justify-between items-start">
                     <Input
-                      label={"Total Supply"}
+                      label={"Max Supply"}
                       labelPlacement={"outside"}
-                      placeholder="e.g. 21000000"
+                      placeholder={(selectedOption !== 'fair') ? "e.g. 21000000" : "Optional"}
                       size="lg"
                       variant="bordered"
                       fullWidth={false}
                       className={"font-mono"}
-                      isRequired
+                      isRequired={selectedOption !== 'fair'}
                       value={totalSupply}
                       onValueChange={onTotalSupplyChange}
                       isInvalid={isTotalSupplyInvalid}
@@ -357,7 +377,7 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
                     <Input
                       label="Limit Per Mint"
                       labelPlacement={"outside"}
-                      placeholder="Optional"
+                      placeholder={(selectedOption !== 'fair') ? "Optional" : "Required"}
                       size="lg"
                       variant="bordered"
                       fullWidth={false}

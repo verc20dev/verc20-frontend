@@ -1,6 +1,6 @@
 'use client'
 
-import { FC, useCallback, useState } from "react";
+import React, { FC, useCallback, useMemo, useState } from "react";
 import {
   Modal,
   ModalContent,
@@ -15,6 +15,9 @@ import { useAccount } from "wagmi";
 import { useEthersSigner } from "@/hook/ethers";
 import { enqueueSnackbar } from "notistack";
 import { formMintInput } from "@/utils/tx-message";
+import { CloseIcon } from "@nextui-org/shared-icons";
+import { formatEther } from "viem";
+import { getBigInt } from "ethers";
 
 export interface MintTokenModalProps {
   tokenName: string;
@@ -27,13 +30,15 @@ export const MintTokenModal: FC<MintTokenModalProps> = ({
   isOpen, onOpenChange, tokenName, amountLimit
 }: MintTokenModalProps) => {
   const [amt, setAmt] = useState('');
-  const [amtValid, setAmtValid] = useState(false);
+  const [amtValid, setAmtValid] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
 
   const {address, isConnected, isDisconnected} = useAccount();
   const signer = useEthersSigner();
 
-  const mintDisabled = !amtValid || isConfirming;
+  const mintDisabled = useMemo(() => {
+    return !amtValid || isConfirming || !isConnected || isDisconnected || !signer || !amt || amt === '0' || amt === '';
+  }, [amt, amtValid, isConfirming, isConnected, isDisconnected, signer]);
 
   const onAmtChange = useCallback((value: string) => {
     const numericValue = Number(value);
@@ -99,6 +104,19 @@ export const MintTokenModal: FC<MintTokenModalProps> = ({
     onOpenChange, signer, tokenName
   ])
 
+  const amountInputEndContent = useMemo(() => {
+    return (
+      <div className="flex items-center gap-2">
+        <Button size="sm" onPress={() => setAmt("")} isIconOnly radius="md">
+          <CloseIcon/>
+        </Button>
+        <Button size="sm" color="primary" onPress={() => setAmt(amountLimit.toString())}>
+          <p className="font-bold">Auto</p>
+        </Button>
+      </div>
+    )
+  }, [amountLimit])
+
 
 
   return <>
@@ -112,17 +130,26 @@ export const MintTokenModal: FC<MintTokenModalProps> = ({
             <ModalBody>
               <div className="flex flex-col gap-4 mt-4">
                 <div className="flex justify-between items-start">
-                  <p className="font-bold">Amount:</p>
                   <Input
-                    size="sm"
+                    size="lg"
+                    label={"Amount"}
+                    labelPlacement={"outside"}
                     variant="bordered"
-                    fullWidth={false}
-                    className={"w-[200px] sm:w-[250px] font-mono"}
+                    className={"font-mono"}
+                    isRequired
                     value={amt}
                     onValueChange={onAmtChange}
                     isInvalid={!amtValid}
                     errorMessage={!amtValid && "Invalid amount"}
+                    endContent={amountInputEndContent}
                   />
+                </div>
+                {/*create a notice section*/}
+                <div className="flex flex-row gap-2">
+                  <p className="text-lg text-gray-400">Notice: </p>
+                  <p className="text-sm text-gray-500">
+                    Minting {tokenName} is free; therefore, the most effective approach is to mint the maximum amount within the given limit at once.
+                  </p>
                 </div>
               </div>
             </ModalBody>

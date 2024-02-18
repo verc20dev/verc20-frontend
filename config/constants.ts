@@ -18,7 +18,8 @@ export const MARKET_CONTRACT_DOMAIN = {
 
 export const MARKET_CONTRACT_ORDER_TYPES = {
   VERC20Order: [
-    {name: "seller", type: "address"},
+    {name: "maker", type: "address"},
+    {name: "sell", type: "bool"},
     {name: "listId", type: "bytes32"},
     {name: "tick", type: "string"},
     {name: "amount", type: "uint256"},
@@ -27,3 +28,14 @@ export const MARKET_CONTRACT_ORDER_TYPES = {
     {name: "expirationTime", type: "uint64"},
   ]
 }
+
+export const FREEZE_ORDER_TYPES = {
+  VERC20Freeze: [
+    {name: "owner", type: "address"},
+    {name: "amount", type: "uint256"},
+    {name: "tick", type: "string"},
+  ]
+}
+
+export const PROTOCOL_FEE_RATE = 0.015
+export const LIQUIDITY_REWARD_RATE = 0.005

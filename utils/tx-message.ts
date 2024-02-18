@@ -18,6 +18,7 @@ export interface DeployInput {
   limit?: string
   startBlock?: string
   duration?: string
+  type?: string
 }
 
 export interface MintInput {
@@ -42,7 +43,14 @@ export function formDeployInput(input: DeployInput) {
     ...defaultPayload,
     op: 'deploy',
     tick: input.tick,
-    max: input.totalSupply,
+  }
+
+  if (
+    input.totalSupply !== undefined &&
+    input.totalSupply !== null &&
+    input.totalSupply !== ''
+  ) {
+    payload['max'] = input.totalSupply
   }
 
   if (
@@ -76,6 +84,14 @@ export function formDeployInput(input: DeployInput) {
     input.duration !== ''
   ) {
     payload['duration'] = input.duration
+  }
+
+  if (
+    input.type !== undefined &&
+    input.type !== null &&
+    input.type !== ''
+  ) {
+    payload['t'] = input.type
   }
 
   return toCbor(payload)

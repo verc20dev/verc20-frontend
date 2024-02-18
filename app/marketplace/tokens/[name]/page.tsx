@@ -8,7 +8,7 @@ import { OfficialBadge, VerifiedBadge } from "@/components/badges";
 import { Button } from "@nextui-org/button";
 import useSWR from "swr";
 import { API_ENDPOINT, ETH_PRICE_ENDPOINT } from "@/config/constants";
-import CreateListingModal from "@/components/create-listing-modal";
+import CreateOrderModal from "@/components/create-order-modal";
 import { Card, CardBody, CardFooter, CardHeader, Chip, Divider, Tab, Tabs, useDisclosure } from "@nextui-org/react";
 import { formatEther, parseEther } from "viem";
 import { useAccount } from "wagmi";
@@ -192,9 +192,9 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
               onPress={onCreateListingModalOpen}
               startContent={<CoinIcon/>}
             >
-              List
+              Make Order
             </Button>
-            <CreateListingModal
+            <CreateOrderModal
               isOpen={creatListingModalOpen}
               tokenName={params.name}
               onOpenChange={onCreateListingModalOpenChange}/>
@@ -247,10 +247,10 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
             onSelectionChange={(key) => setSelectedTab(key.toString())}
           >
             <Tab
-              key="listed"
+              key="askOrder"
               title={
                 <div className="flex items-center space-x-2">
-                  <span>Listed</span>
+                  <span>Ask Orders</span>
                 </div>
               }
             >
@@ -266,6 +266,31 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
                   // @ts-ignore
                   address={address} ethPrice={ethPrice?.data?.amount}
                   setParentRefetch={setShouldFetch}
+                  type={"ask"}
+                />
+              </Card>
+            </Tab>
+            <Tab
+              key="bidOrder"
+              title={
+                <div className="flex items-center space-x-2">
+                  <span>Bid Orders</span>
+                </div>
+              }
+            >
+              <Card
+                className="w-full flex items-center"
+                classNames={{
+                  base: "min-h-[400px]",
+                }}
+              >
+                <OrderTable
+                  tick={params.name}
+                  shouldFetch={shouldFetchOrders}
+                  // @ts-ignore
+                  address={address} ethPrice={ethPrice?.data?.amount}
+                  setParentRefetch={setShouldFetch}
+                  type={"bid"}
                 />
               </Card>
             </Tab>
@@ -312,6 +337,8 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
                   ethPrice={ethPrice?.data?.amount}
                   justSelf={true}
                   setParentRefetch={setShouldFetch}
+                  type={"ask"}
+                  displayTypeToggle={true}
                 />
               </Card>
             </Tab>

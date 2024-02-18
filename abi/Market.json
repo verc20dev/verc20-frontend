@@ -167,8 +167,14 @@
       {
         "indexed": false,
         "internalType": "address",
-        "name": "seller",
+        "name": "maker",
         "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "sell",
+        "type": "bool"
       },
       {
         "indexed": false,
@@ -192,8 +198,14 @@
       {
         "indexed": false,
         "internalType": "address",
-        "name": "seller",
+        "name": "maker",
         "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "sell",
+        "type": "bool"
       },
       {
         "indexed": false,
@@ -301,8 +313,13 @@
         "components": [
           {
             "internalType": "address",
-            "name": "seller",
+            "name": "maker",
             "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "sell",
+            "type": "bool"
           },
           {
             "internalType": "bytes32",
@@ -409,8 +426,13 @@
         "components": [
           {
             "internalType": "address",
-            "name": "seller",
+            "name": "maker",
             "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "sell",
+            "type": "bool"
           },
           {
             "internalType": "bytes32",
@@ -464,7 +486,7 @@
       },
       {
         "internalType": "address",
-        "name": "recipient",
+        "name": "taker",
         "type": "address"
       }
     ],

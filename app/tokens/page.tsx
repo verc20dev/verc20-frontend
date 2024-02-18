@@ -94,6 +94,8 @@ export default function TokensPage() {
     watch: true,
   })
 
+  console.log(currentBlock, currentBlockIsError, currentBlockIsLoading)
+
   const [offset, setOffset] = useState<number | undefined>(0);
   const [limit, setLimit] = useState<number | undefined>();
   const [sort, setSort] = useState<string | undefined>();
@@ -144,6 +146,7 @@ export default function TokensPage() {
           transactions: item['transactions'],
           isVerified: item['isVerified'],
           isOfficial: item['isOfficial'],
+          haveMaxSupply: totalSupply !== undefined && totalSupply > 0,
         }
 
         if ((item['start_block'] != undefined || item['duration'] != undefined ) && currentBlock != undefined) {
@@ -270,7 +273,7 @@ export default function TokensPage() {
 
         return <div className="flex flex-col gap-2">
           {timeProgressBar}
-          <Progress
+          {user.haveMaxSupply && <Progress
             aria-label="progress"
             showValueLabel={true}
             size="sm"
@@ -287,7 +290,7 @@ export default function TokensPage() {
               maximumFractionDigits: 4,
               style: "percent",
             }}
-          />
+          />}
         </div>;
       case "holders":
       case "transactions":
