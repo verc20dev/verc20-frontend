@@ -13,7 +13,7 @@ import { Input } from "@nextui-org/input";
 import { Spinner } from "@nextui-org/spinner";
 import { useAccount } from "wagmi";
 import { useEthersSigner } from "@/hook/ethers";
-import { enqueueSnackbar } from "notistack";
+import { closeSnackbar, enqueueSnackbar } from "notistack";
 import { formMintInput } from "@/utils/tx-message";
 import { CloseIcon } from "@nextui-org/shared-icons";
 import { formatEther } from "viem";
@@ -88,11 +88,15 @@ export const MintTokenModal: FC<MintTokenModalProps> = ({
         onOpenChange && onOpenChange(false);
       })
       .catch((err) => {
-        if (err.code === 4001) {
+        if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
           enqueueSnackbar('Mint cancelled', {variant: 'warning'})
         } else {
           console.log(err)
-          enqueueSnackbar('Mint failed', {variant: 'error'})
+          enqueueSnackbar(`Mint failed. Reason: ${err.code}`, {
+            variant: 'error',
+            persist: true,
+            action: (key) => (<Button size={"sm"} onPress={() => closeSnackbar(key)}>Dismiss</Button>)
+          })
         }
       })
       .finally(() => {
@@ -116,7 +120,6 @@ export const MintTokenModal: FC<MintTokenModalProps> = ({
       </div>
     )
   }, [amountLimit])
-
 
 
   return <>
@@ -148,7 +151,8 @@ export const MintTokenModal: FC<MintTokenModalProps> = ({
                 <div className="flex flex-row gap-2">
                   <p className="text-lg text-gray-400">Notice: </p>
                   <p className="text-sm text-gray-500">
-                    Minting {tokenName} is free; therefore, the most effective approach is to mint the maximum amount within the given limit at once.
+                    Minting {tokenName} is free; therefore, the most effective approach is to mint the maximum amount
+                    within the given limit at once.
                   </p>
                 </div>
               </div>

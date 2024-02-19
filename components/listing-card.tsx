@@ -27,12 +27,13 @@ import {
   MARKET_CONTRACT_DOMAIN,
   MARKET_CONTRACT_ORDER_TYPES, PROTOCOL_FEE_RATE
 } from "@/config/constants";
-import { enqueueSnackbar } from "notistack";
+import { closeSnackbar, enqueueSnackbar } from "notistack";
 import { Spinner } from "@nextui-org/spinner";
 import useSWR, { useSWRConfig } from "swr";
-import { ArrowLeftIcon, ArrowRightIcon } from "@nextui-org/shared-icons";
+import { ArrowLeftIcon, ArrowRightIcon, CloseIcon } from "@nextui-org/shared-icons";
 import { ModalHeader } from "@nextui-org/modal";
 import { useEthersSigner } from "@/hook/ethers";
+import BigNumber from "bignumber.js";
 
 export interface ListingCardProps {
   id: number;
@@ -135,7 +136,7 @@ const ListingCard = (props: ListingCardProps) => {
         props.unitPrice
       )
     )) * (PROTOCOL_FEE_RATE + LIQUIDITY_REWARD_RATE)
-    return formatEther(getBigInt(feeInWei))
+    return formatEther(getBigInt(feeInWei.toString()))
   }, [props.quantity, props.unitPrice])
 
   const takeOrderValue = useCallback(() => {
@@ -143,8 +144,8 @@ const ListingCard = (props: ListingCardProps) => {
     if (props.sell) {
       const unitPrice = getBigInt(parsedInput().price)
       const quantity = getBigInt(parsedInput().amount)
-      const orderValue =  unitPrice * quantity
-      const protocolFee = getBigInt(Number(orderValue) * (PROTOCOL_FEE_RATE + LIQUIDITY_REWARD_RATE))
+      const orderValue = unitPrice * quantity
+      const protocolFee = getBigInt((Number(orderValue) * (PROTOCOL_FEE_RATE + LIQUIDITY_REWARD_RATE)).toString())
       return orderValue + protocolFee
     } else {
       // buy order
@@ -178,11 +179,11 @@ const ListingCard = (props: ListingCardProps) => {
     },
     onError: (e: any) => {
       console.log(e)
-      if (e.code === 4001 || e.code === 'ACTION_REJECTED') {
-        enqueueSnackbar('User rejected transaction', {variant: 'warning'})
-      } else {
-        enqueueSnackbar('Error: Tx failed to send', {variant: 'error'})
-      }
+      enqueueSnackbar(`Error: Tx failed to send. Reason: ${e.shortMessage}`, {
+        variant: 'error',
+        persist: true,
+        action: (key) => (<Button size={"sm"} onPress={() => closeSnackbar(key)}>Dismiss</Button>)
+      })
       props.setParentRefetch?.(true)
       setConfirming(false)
     },
@@ -195,7 +196,11 @@ const ListingCard = (props: ListingCardProps) => {
     hash: takeOrderResult?.hash,
     onError: (e) => {
       console.log(e)
-      enqueueSnackbar('Error: Tx failed to complete:', {variant: 'error'})
+      enqueueSnackbar(`Error: Tx failed to complete.`, {
+        variant: 'error',
+        persist: true,
+        action: (key) => (<Button size={"sm"} onPress={() => closeSnackbar(key)}>Dismiss</Button>)
+      })
     },
     onSuccess: () => {
       const executeOrderEp = `${API_ENDPOINT}/market/orders/${props.id}/execute`
@@ -244,11 +249,14 @@ const ListingCard = (props: ListingCardProps) => {
     },
     onError: (e: any) => {
       console.log(e)
-      if (e.code === 4001 || e.code === 'ACTION_REJECTED') {
-        enqueueSnackbar('User rejected transaction', {variant: 'warning'})
-      } else {
-        enqueueSnackbar('Error: Tx failed to send', {variant: 'error'})
-      }
+      enqueueSnackbar(
+        `Error: Tx failed to send. Reason: ${e.shortMessage}`,
+        {
+          variant: 'error',
+          persist: true,
+          action: (key) => (<Button size={"sm"} onPress={() => closeSnackbar(key)}>Dismiss</Button>)
+        },
+      )
       props.setParentRefetch?.(true)
       setConfirming(false)
     }
@@ -261,7 +269,11 @@ const ListingCard = (props: ListingCardProps) => {
     hash: cancelOrderResult?.hash,
     onError: (e) => {
       console.log(e)
-      enqueueSnackbar('Error: Tx failed to complete:', {variant: 'error'})
+      enqueueSnackbar('Error: Tx failed to complete:', {
+        variant: 'error',
+        persist: true,
+        action: (key) => (<Button size={"sm"} onPress={() => closeSnackbar(key)}>Dismiss</Button>)
+      })
     },
     onSuccess: () => {
       const cancelOrderEp = `${API_ENDPOINT}/market/orders/${props.id}/cancel`
@@ -405,21 +417,15 @@ const ListingCard = (props: ListingCardProps) => {
   }, [protocolFeeInEth, props.ethPrice])
 
   const totalPayInEth = useMemo(() => {
-
-    console.log('protocolFeeInEth', protocolFeeInEth)
-    console.log('Number(props.quantity)', Number(props.quantity))
-    console.log('Number(getBigInt(props.unitPrice))', Number(getBigInt(props.unitPrice)))
-
-    return Number(formatEther(parseEther(protocolFeeInEth))) +
-      Number(formatEther(getBigInt(props.quantity) * getBigInt(props.unitPrice)))
+    const protocolFee = new BigNumber(Number(formatEther(parseEther(protocolFeeInEth))))
+    const orderValue = new BigNumber(Number(formatEther(getBigInt(props.quantity) * getBigInt(props.unitPrice))))
+    return protocolFee.plus(orderValue).toString()
   }, [props, protocolFeeInEth])
 
   const totalPayInUsd = useMemo(() => {
     return Number(totalPayInEth) * Number(props.ethPrice)
   }, [totalPayInEth, props])
 
-  console.log('props', props)
-  console.log(Number(getBigInt(props.unitPrice)))
 
   const cardFooter = useMemo(() => {
     if (!isConnected || isDisconnected) {

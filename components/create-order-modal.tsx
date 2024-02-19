@@ -15,7 +15,7 @@ import {
 import useSWRMutation from "swr/mutation";
 import { useAccount, useBalance, useNetwork } from "wagmi";
 import { useEthersSigner } from "@/hook/ethers";
-import { enqueueSnackbar } from "notistack";
+import { closeSnackbar, enqueueSnackbar } from "notistack";
 import { formListInput } from "@/utils/tx-message";
 import { getBigInt } from "ethers";
 import { formatEther, parseEther } from "viem";
@@ -99,6 +99,10 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
   }, [userBalanceData])
 
   const userEthBalance = useMemo(() => {
+    return Number(ethBalance?.formatted)
+  }, [ethBalance])
+
+  const userEthBalanceStr = useMemo(() => {
     const balanceString = ethBalance?.formatted
     return new Intl.NumberFormat(
       'en-US',
@@ -160,8 +164,14 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
       return;
     }
 
-    // bid order have no amount limit
+    // bid order have no amount limit, but need to check if amount * unit price > user eth balance
     if (orderType === "bid") {
+      if (Number(value) * Number(unitPrice) > Number(userEthBalance)) {
+        setIsAmountInvalid(true);
+        setAmountErrorText("Total price must be less than or equal to your max eth balance");
+        return;
+      }
+
       setIsAmountInvalid(false);
       setAmountErrorText("");
       return;
@@ -180,7 +190,7 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
       setIsAmountInvalid(false);
       setAmountErrorText("");
     }
-  }, [userBalanceData, orderType])
+  }, [userBalanceData, orderType, unitPrice, userEthBalance])
 
   const onUnitPriceChange = useCallback((value: string) => {
     setUnitPrice(value);
@@ -233,16 +243,16 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
     }
 
     return <div className="flex flex-row gap-2">
-      <Button size="sm" onPress={() => setAmount("")} isIconOnly radius="md">
+      <Button size="sm" onPress={() => onAmountChange("")} isIconOnly radius="md">
         <CloseIcon/>
       </Button>
       {orderType === "ask" &&
-        <Button size="sm" color="primary" onPress={() => setAmount(maxAmount)}>
+        <Button size="sm" color="primary" onPress={() => onAmountChange(maxAmount)}>
           <p className="font-bold">Max</p>
         </Button>
       }
     </div>
-  }, [userBalanceData, orderType]);
+  }, [userBalanceData, orderType, onAmountChange]);
 
   const unitPriceInputEndContent = useMemo(() => {
     return (
@@ -254,15 +264,15 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
           <p
             className="text-gray-400 inline">≈&nbsp;${getEstimateUnitPrice(unitPrice, ethPrice?.data?.amount)}</p>
         </div>
-        <Button size="sm" onPress={() => setUnitPrice("")} isIconOnly radius="md">
+        <Button size="sm" onPress={() => onUnitPriceChange("")} isIconOnly radius="md">
           <CloseIcon/>
         </Button>
-        <Button size="sm" color="primary" onPress={() => setUnitPrice(formatEther(getBigInt(floorPrice)))}>
+        <Button size="sm" color="primary" onPress={() => onUnitPriceChange(formatEther(getBigInt(floorPrice)))}>
           <p className="font-bold">Auto</p>
         </Button>
       </div>
     )
-  }, [ethPrice, floorPrice, unitPrice]);
+  }, [ethPrice, floorPrice, unitPrice, onUnitPriceChange]);
 
   const summarySection = useMemo(() => {
     return (
@@ -426,6 +436,7 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
 
                   })
                   .catch((err) => {
+                    // notice: this will not suppose to happen
                     console.log(err)
                     enqueueSnackbar('List failed', {variant: 'error'})
                   })
@@ -436,7 +447,7 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
                 if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
                   enqueueSnackbar('List Sign cancelled', {variant: 'warning'})
                 } else {
-                  enqueueSnackbar('List Sign failed', {variant: 'error'})
+                  enqueueSnackbar(`List Sign failed. Reason: ${err.code}`, {variant: 'error'})
                 }
 
               })
@@ -449,7 +460,11 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
           })
           .catch((err) => {
             console.log(err)
-            enqueueSnackbar('List sign failed', {variant: 'error'})
+            enqueueSnackbar(`List Tx failed. Reason: ${err.code}`, {
+              variant: 'error',
+              persist: true,
+              action: (key) => (<Button size={"sm"} onPress={() => closeSnackbar(key)}>Dismiss</Button>)
+            })
           })
       })
       .catch((err) => {
@@ -457,7 +472,11 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
           enqueueSnackbar('List cancelled', {variant: 'warning'})
         } else {
           console.log(err)
-          enqueueSnackbar('List failed', {variant: 'error'})
+          enqueueSnackbar(`List failed. Reason: ${err.code}`, {
+            variant: 'error',
+            persist: true,
+            action: (key) => (<Button size={"sm"} onPress={() => closeSnackbar(key)}>Dismiss</Button>)
+          })
         }
         setConfirmingText("Confirming...")
         setConfirming(false);
@@ -498,6 +517,7 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
                     <div className="flex flex-row justify-between items-center font-mono">
                       <p>Order Type:</p>
                       <Tabs
+                        isDisabled={confirming}
                         key={"success"}
                         color={"success"}
                         size="md"
@@ -524,7 +544,7 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
                       </div>
                       :
                       <div className="flex justify-between items-start font-mono">
-                        Balance: <span className="font-bold">{userEthBalance}&nbsp;ETH</span>
+                        Balance: <span className="font-bold">{userEthBalanceStr}&nbsp;ETH</span>
                       </div>
                     }
                     <div className="flex justify-between items-start font-mono">
@@ -538,6 +558,7 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
 
                   <div className="flex justify-between items-start mt-2 sm:mt-0">
                     <Input
+                      isDisabled={confirming}
                       label="Amount"
                       labelPlacement={"outside"}
                       placeholder=""
@@ -555,6 +576,7 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
                   </div>
                   <div className="flex justify-between items-start mt-2 sm:mt-0">
                     <Input
+                      isDisabled={confirming}
                       label="Unit Price"
                       labelPlacement={"outside"}
                       placeholder=""
@@ -572,6 +594,7 @@ const CreateOrderModal: FC<CreateOrderModalProps> = ({
                   </div>
                   <div className="flex items-center mt-2 sm:mt-0">
                     <Select
+                      isDisabled={confirming}
                       labelPlacement={"outside"}
                       label="Expires&nbsp;in"
                       defaultSelectedKeys={["7D"]}

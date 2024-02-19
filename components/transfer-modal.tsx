@@ -7,7 +7,7 @@ import { Input } from "@nextui-org/input";
 import { Spinner } from "@nextui-org/spinner";
 import { useAccount } from "wagmi";
 import { useEthersSigner } from "@/hook/ethers";
-import { enqueueSnackbar } from "notistack";
+import { closeSnackbar, enqueueSnackbar } from "notistack";
 import { isAddress, parseEther } from "viem";
 import { formTransferInput } from "@/utils/tx-message";
 import { API_ENDPOINT } from "@/config/constants";
@@ -135,11 +135,15 @@ export const TransferTokenModal: FC<TransferTokenModalProps> = ({
         enqueueSnackbar("Transfer Tx successful sent", {variant: "success"});
       })
       .catch((err) => {
-        if (err.code === 4001) {
+        if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
           enqueueSnackbar('Mint cancelled', {variant: 'warning'})
         } else {
           console.log(err)
-          enqueueSnackbar('Mint failed', {variant: 'error'})
+          enqueueSnackbar(`Mint failed. ERR CODE: ${err.code}`, {
+            variant: 'error',
+            persist: true,
+            action: (key) => (<Button size={"sm"} onPress={() => closeSnackbar(key)}>Dismiss</Button>)
+          })
         }
       })
       .finally(() => {

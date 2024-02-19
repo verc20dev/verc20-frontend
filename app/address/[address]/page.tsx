@@ -229,8 +229,6 @@ export default function AddressDetailPage({params}: { params: { address: string 
 
   const items = useMemo(() => {
 
-    console.log('data', data)
-
     if (data === undefined) return []
     if (data.tokens === undefined) return []
 

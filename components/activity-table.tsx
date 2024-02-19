@@ -11,7 +11,7 @@ import {
 } from "@nextui-org/react";
 import { Spinner } from "@nextui-org/spinner";
 import useSWR from "swr";
-import { API_ENDPOINT } from "@/config/constants";
+import { API_ENDPOINT, BLOCK_EXPLORER_URL } from "@/config/constants";
 import { useRouter } from "next/navigation";
 import { getBigInt } from "ethers";
 import { formatEther } from "viem";
@@ -184,7 +184,7 @@ const ActivityTable = (props: ActivityTableProps) => {
           <Link
             isExternal={true}
             showAnchorIcon
-            href={`https://etherscan.io/tx/${cellValue}`}
+            href={`${BLOCK_EXPLORER_URL}/tx/${cellValue}`}
           />
         </Tooltip>
       default:

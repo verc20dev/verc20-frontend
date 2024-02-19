@@ -156,8 +156,6 @@ const MarketplacePage = () => {
     return itemsMapping[tick].isOfficial
   }, [itemsMapping])
 
-  console.log(items)
-
   const renderCell = useCallback((item: any, columnKey: React.Key) => {
     const cellValue = item[columnKey as keyof any];
     switch (columnKey) {

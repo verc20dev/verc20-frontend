@@ -5,7 +5,7 @@ import {
   ModalBody,
   ModalFooter,
 } from "@nextui-org/modal";
-import { FC, useCallback, useMemo, useState } from "react";
+import React, { FC, useCallback, useMemo, useState } from "react";
 import { Button, ButtonGroup } from "@nextui-org/button";
 import { Input, Textarea } from "@nextui-org/input";
 import { Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Tab, Tabs, Tooltip } from "@nextui-org/react";
@@ -15,7 +15,7 @@ import { useAccount, useSendTransaction, usePrepareSendTransaction } from 'wagmi
 import { parseEther } from "viem";
 import { useEthersSigner } from "@/hook/ethers";
 import { DeployInput, formDeployInput } from "@/utils/tx-message";
-import { enqueueSnackbar } from "notistack";
+import { closeSnackbar, enqueueSnackbar } from "notistack";
 import { Spinner } from "@nextui-org/spinner";
 import { API_ENDPOINT } from "@/config/constants";
 import useSWR from "swr";
@@ -197,7 +197,6 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
   ])
 
 
-
   const onConfirm = useCallback(() => {
     if (!isConnected || isDisconnected) {
       enqueueSnackbar('Please connect wallet first', {variant: 'error'})
@@ -244,11 +243,15 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
         onOpenChange && onOpenChange(false);
       })
       .catch((err) => {
-        if (err.code === 4001) {
+        if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
           enqueueSnackbar('Deploy cancelled', {variant: 'warning'})
         } else {
           console.log(err)
-          enqueueSnackbar('Deploy failed', {variant: 'error'})
+          enqueueSnackbar(`Deploy failed. ERR CODE: ${err.code}`, {
+            variant: 'error',
+            persist: true,
+            action: (key) => (<Button size={"sm"} onPress={() => closeSnackbar(key)}>Dismiss</Button>)
+          })
         }
       })
       .finally(() => {

@@ -94,8 +94,6 @@ export default function TokensPage() {
     watch: true,
   })
 
-  console.log(currentBlock, currentBlockIsError, currentBlockIsLoading)
-
   const [offset, setOffset] = useState<number | undefined>(0);
   const [limit, setLimit] = useState<number | undefined>();
   const [sort, setSort] = useState<string | undefined>();
