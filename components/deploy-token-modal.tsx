@@ -160,7 +160,7 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
     }
 
     const numericValue = Number(value);
-    if (isNaN(numericValue) || numericValue <= 0 || numericValue > 60 * 60 * 24) {
+    if (isNaN(numericValue) || !Number.isInteger(numericValue) || numericValue <= 0 || numericValue > 60 * 60 * 24) {
       setIsDurationInvalid(true);
       return;
     }
@@ -181,7 +181,10 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
       return true;
     }
 
-    if (selectedOption === 'fair' && isDurationInvalid && isLimitPerMintInvalid) {
+    if (selectedOption === 'fair') {
+      if (isDurationInvalid || isLimitPerMintInvalid || duration === '' || limitPerMint === '') {
+        return true;
+      }
       return true;
     }
 
@@ -192,8 +195,8 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
     return tick === '';
 
   }, [
-    isDecimalsInvalid, isDurationInvalid, isLimitPerMintInvalid, isTickInvalid,
-    isTotalSupplyInvalid, selectedOption, tick, totalSupply
+    duration, isDecimalsInvalid, isDurationInvalid, isLimitPerMintInvalid,
+    isTickInvalid, isTotalSupplyInvalid, limitPerMint, selectedOption, tick, totalSupply
   ])
 
 
@@ -397,7 +400,7 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
                       label={"Duration"}
                       labelPlacement={"outside"}
                       isClearable
-                      placeholder="Optional"
+                      placeholder={selectedOption === 'fair' ? "Required" : "Optional"}
                       size="lg"
                       variant="bordered"
                       fullWidth={false}

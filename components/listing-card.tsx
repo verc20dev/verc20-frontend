@@ -67,6 +67,12 @@ const ListingCard = (props: ListingCardProps) => {
     onOpenChange: onConfirmModalOpenChange,
   } = useDisclosure()
 
+  const {
+    isOpen: isCancelConfirmModalOpen,
+    onOpen: onCancelConfirmModalOpen,
+    onOpenChange: onCancelConfirmModalOpenChange,
+  } = useDisclosure()
+
   const [confirming, setConfirming] = useState(false)
   const signer = useEthersSigner()
 
@@ -274,6 +280,8 @@ const ListingCard = (props: ListingCardProps) => {
         persist: true,
         action: (key) => (<Button size={"sm"} onPress={() => closeSnackbar(key)}>Dismiss</Button>)
       })
+      props.setParentRefetch?.(true)
+      setConfirming(false)
     },
     onSuccess: () => {
       const cancelOrderEp = `${API_ENDPOINT}/market/orders/${props.id}/cancel`
@@ -321,11 +329,11 @@ const ListingCard = (props: ListingCardProps) => {
     return `${unitPriceInEth} ETH ≈ $ ${new Intl.NumberFormat('en-US').format(unitPriceInUsd)}`
   }
 
-  const unitPriceInUsd = (unitPrice: string): string => {
+  const unitPriceInUsd = useCallback((unitPrice: string): string => {
     const unitPriceInEth = formatEther(getBigInt(unitPrice))
     const unitPriceInUsd = Number(unitPriceInEth) * Number(props.ethPrice)
     return new Intl.NumberFormat('en-US').format(unitPriceInUsd)
-  }
+  }, [props.ethPrice])
 
   const onTake = useCallback(() => {
     onConfirmModalOpenChange()
@@ -400,7 +408,10 @@ const ListingCard = (props: ListingCardProps) => {
   }, [props, signer, takeOrder])
 
   const onCancel = useCallback(() => {
+    onCancelConfirmModalOpenChange()
+  }, [onCancelConfirmModalOpenChange])
 
+  const onConfirmCancel = useCallback(() => {
     if (cancelOrder === undefined) {
       enqueueSnackbar('Error: Contract not ready', {variant: 'error'})
       return
@@ -408,7 +419,6 @@ const ListingCard = (props: ListingCardProps) => {
     props.setParentRefetch?.(false)
     setConfirming(true)
     cancelOrder()
-
   }, [cancelOrder, props])
 
 
@@ -513,6 +523,33 @@ const ListingCard = (props: ListingCardProps) => {
     waitCancelTxLoading, waitTakeTxLoading
   ])
 
+  const cancelModalFooter = useMemo(() => {
+    if (takeOrderLoading || waitTakeTxLoading || waitCancelTxLoading || cancelOrderLoading || confirming) {
+      return (
+        <Button color="primary" className="font-bold" isDisabled startContent={<Spinner color="white"/>}>
+          Confirming...
+        </Button>
+      )
+    }
+
+    return (
+      <div className="flex flex-row gap-4">
+        <Button color="danger" className="font-bold" variant={"ghost"} onPress={() => {
+          onCancelConfirmModalOpenChange()
+          setConfirming(false)
+        }}>
+          Cancel
+        </Button>
+        <Button color="primary" className="font-bold" onClick={onConfirmCancel}>
+          Confirm
+        </Button>
+      </div>
+    )
+  }, [
+    cancelOrderLoading, confirming, onCancelConfirmModalOpenChange, onConfirmCancel,
+    takeOrderLoading, waitCancelTxLoading, waitTakeTxLoading
+  ])
+
   const summaryComponent = useMemo(() => {
     if (props.sell) {
       return (
@@ -593,6 +630,46 @@ const ListingCard = (props: ListingCardProps) => {
     props, protocolFeeInEth, protocolFeeInUsd,
     totalPayInEth, totalPayInUsd, totalPriceInUsd
   ])
+
+  const orderDetailsComponent = useMemo(() => {
+    return (
+      <div className="flex flex-col gap-4 rounded-md sm:p-4 p-2 border-default border-2">
+        <p className="text-sm font-bold">Order Details</p>
+        <div className="flex flex-row justify-between items-center font-mono">
+          <p>Type:</p>
+          <Button
+            color="success"
+            className="font-mono font-bold text-sm"
+            size="sm"
+            disableRipple
+            disableAnimation
+          >
+            {props.sell ? "Ask" : "Bid"}
+          </Button>
+
+        </div>
+        <div className="flex flex-row justify-between">
+          <p className="font-mono">Tick:</p>
+          <p className="font-mono font-bold">{props.tick}</p>
+        </div>
+        <div className="flex flex-row justify-between">
+          <p className="font-mono">Quantity:</p>
+          <p
+            className="font-mono font-bold">{new Intl.NumberFormat('en-US').format(Number(props.quantity))}</p>
+        </div>
+        <div className="flex flex-row justify-between">
+          <p className="font-mono">Unit Price:</p>
+          <p className="font-mono font-bold">{formatEther(getBigInt(props.unitPrice))} ETH ≈
+            $ {unitPriceInUsd(props.unitPrice)}</p>
+        </div>
+        <div className="flex flex-row justify-between">
+          <p className="font-mono">Total Price</p>
+          <p className="font-mono font-bold">{totalPriceInEth(props.quantity, props.unitPrice)} ETH ≈
+            $ {totalPriceInUsd(props.quantity, props.unitPrice)}</p>
+        </div>
+      </div>
+    )
+  }, [props, totalPriceInUsd, unitPriceInUsd])
 
 
   return (
@@ -701,41 +778,7 @@ const ListingCard = (props: ListingCardProps) => {
               </ModalHeader>
               <ModalBody>
                 <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-4 rounded-md sm:p-4 p-2 border-default border-2">
-                    <p className="text-sm font-bold">Order Details</p>
-                    <div className="flex flex-row justify-between items-center font-mono">
-                      <p>Type:</p>
-                      <Button
-                        color="success"
-                        className="font-mono font-bold text-sm"
-                        size="sm"
-                        disableRipple
-                        disableAnimation
-                      >
-                        {props.sell ? "Ask" : "Bid"}
-                      </Button>
-
-                    </div>
-                    <div className="flex flex-row justify-between">
-                      <p className="font-mono">Tick:</p>
-                      <p className="font-mono font-bold">{props.tick}</p>
-                    </div>
-                    <div className="flex flex-row justify-between">
-                      <p className="font-mono">Quantity:</p>
-                      <p
-                        className="font-mono font-bold">{new Intl.NumberFormat('en-US').format(Number(props.quantity))}</p>
-                    </div>
-                    <div className="flex flex-row justify-between">
-                      <p className="font-mono">Unit Price:</p>
-                      <p className="font-mono font-bold">{formatEther(getBigInt(props.unitPrice))} ETH ≈
-                        $ {unitPriceInUsd(props.unitPrice)}</p>
-                    </div>
-                    <div className="flex flex-row justify-between">
-                      <p className="font-mono">Total Price</p>
-                      <p className="font-mono font-bold">{totalPriceInEth(props.quantity, props.unitPrice)} ETH ≈
-                        $ {totalPriceInUsd(props.quantity, props.unitPrice)}</p>
-                    </div>
-                  </div>
+                  {orderDetailsComponent}
                   <div className="flex flex-col gap-4 rounded-md sm:p-4 p-2 border-default border-2">
                     <p className="text-sm font-bold">Summary</p>
                     {summaryComponent}
@@ -744,6 +787,33 @@ const ListingCard = (props: ListingCardProps) => {
               </ModalBody>
               <ModalFooter>
                 {modalFooter}
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+      <Modal
+        isOpen={isCancelConfirmModalOpen}
+        onOpenChange={onCancelConfirmModalOpenChange}
+        isDismissable={!confirming}
+        isKeyboardDismissDisabled={!confirming}
+        hideCloseButton={confirming}
+        backdrop="blur"
+        size="lg"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1 font-bold text-center">
+                Cancel Order Confirmation
+              </ModalHeader>
+              <ModalBody>
+                <div className="flex flex-col gap-4">
+                  {orderDetailsComponent}
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                {cancelModalFooter}
               </ModalFooter>
             </>
           )}
