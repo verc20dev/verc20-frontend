@@ -8,19 +8,16 @@ import {
 import React, { FC, useCallback, useMemo, useState } from "react";
 import { Button, ButtonGroup } from "@nextui-org/button";
 import { Input, Textarea } from "@nextui-org/input";
-import { Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Tab, Tabs, Tooltip } from "@nextui-org/react";
-import { ChevronDownIcon } from "@nextui-org/shared-icons";
-import { Link } from "@nextui-org/link";
-import { useAccount, useSendTransaction, usePrepareSendTransaction } from 'wagmi'
+import { Tab, Tabs, Tooltip } from "@nextui-org/react";
+import { useAccount } from 'wagmi'
 import { parseEther } from "viem";
 import { useEthersSigner } from "@/hook/ethers";
 import { DeployInput, formDeployInput } from "@/utils/tx-message";
 import { closeSnackbar, enqueueSnackbar } from "notistack";
 import { Spinner } from "@nextui-org/spinner";
-import { API_ENDPOINT } from "@/config/constants";
+import { API_ENDPOINT, MAX_DURATION } from "@/config/constants";
 import useSWR from "swr";
 import { CorrectIcon, ErrorIcon, QuestionIcon } from "@/components/icons";
-import Error from "next/error";
 
 
 export interface DeployTokenModalProps {
@@ -56,37 +53,6 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
   const {data, isLoading: checkTickLoading, isValidating} = useSWR(
     (tick && tick !== '') ? `${API_ENDPOINT}/tokens/${tick}` : null, fetcher
   );
-
-  const descriptionsMap = {
-    normal:
-      <div className="text-xs">
-        All commits from the source branch are added to the destination branch individually.
-        <Link
-          size="sm"
-          underline={"always"}
-          href="https://docs.github.com/en/github/administering-a-repository/about-merge-methods-on-github"
-          isExternal
-          showAnchorIcon
-        >Learn more</Link>
-      </div>,
-    fair:
-      <div className="text-xs">
-        All commits from the source branch are added to the destination branch as a single commit. &nbsp;
-        <Link
-          size="sm"
-          underline={"always"}
-          href="https://docs.github.com/en/github/administering-a-repository/about-merge-methods-on-github"
-          isExternal
-          showAnchorIcon
-        >Learn more</Link>
-      </div>,
-  };
-
-  const labelsMap: Record<string, string> = {
-    "normal": "Normal",
-    "fair": "Fairmint",
-  }
-
 
   const onDecimalsChange = useCallback((value: string) => {
     setDecimals(value);
@@ -160,7 +126,7 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
     }
 
     const numericValue = Number(value);
-    if (isNaN(numericValue) || !Number.isInteger(numericValue) || numericValue <= 0 || numericValue > 60 * 60 * 24) {
+    if (isNaN(numericValue) || !Number.isInteger(numericValue) || numericValue <= 0 || numericValue > MAX_DURATION) {
       setIsDurationInvalid(true);
       return;
     }
@@ -178,14 +144,14 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
 
   const deployDisabled = useCallback((): boolean => {
     if (isTickInvalid || isDecimalsInvalid || isTotalSupplyInvalid || isLimitPerMintInvalid) {
+      if (selectedOption === 'fair') {
+        return isTickInvalid || isDecimalsInvalid || isLimitPerMintInvalid
+      }
       return true;
     }
 
     if (selectedOption === 'fair') {
-      if (isDurationInvalid || isLimitPerMintInvalid || duration === '' || limitPerMint === '') {
-        return true;
-      }
-      return true;
+      return isDurationInvalid || isLimitPerMintInvalid || duration === '' || limitPerMint === '';
     }
 
     if (selectedOption === 'normal' && totalSupply === '') {
@@ -227,6 +193,7 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
 
     if (selectedOption === 'fair') {
       inputStruct.type = 'fair'
+      inputStruct.totalSupply = ''
     }
 
     const inputData = formDeployInput(inputStruct);
@@ -267,8 +234,9 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
   ])
 
   const tickInputEndContent = useMemo(() => {
+    const spinner = <Spinner color={"secondary"}/>;
     if (checkTickLoading || isValidating) {
-      return <Spinner color={"secondary"}/>
+      return spinner
     }
     if (tick && tick !== '' && data) {
       if (data.status === 404) {
@@ -281,7 +249,7 @@ export const DeployTokenModal: FC<DeployTokenModalProps> = ({isOpen, onOpenChang
         </Tooltip>
       }
     }
-    return (<Spinner></Spinner>)
+    return spinner
   }, [checkTickLoading, data, isValidating, tick])
 
   const durationInputEndContent = useMemo(() => {

@@ -10,6 +10,9 @@ export const CHAIN_NAME = process.env.NEXT_PUBLIC_CHAIN_NAME || 'goerli'
 export const INFURA_API_KEY = process.env.NEXT_PUBLIC_INFURA_API_KEY || ''
 export const ALCHEMY_API_KEY = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || ''
 
+// set max duration to 2 days currently
+export const MAX_DURATION = Number(process.env.NEXT_PUBLIC_MAX_DURATION) || 60 * 60 * 24 / 12 * 2
+
 export const MARKET_CONTRACT_DOMAIN = {
   name: "VERC20Market",
   version: "1.0",
