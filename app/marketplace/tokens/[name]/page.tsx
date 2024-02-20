@@ -9,12 +9,25 @@ import { Button } from "@nextui-org/button";
 import useSWR from "swr";
 import { API_ENDPOINT, ETH_PRICE_ENDPOINT } from "@/config/constants";
 import CreateOrderModal from "@/components/create-order-modal";
-import { Card, CardBody, CardFooter, CardHeader, Chip, Divider, Tab, Tabs, useDisclosure } from "@nextui-org/react";
+import {
+  Card,
+  CardBody,
+  CardFooter,
+  CardHeader,
+  Chip,
+  Divider,
+  Select,
+  Tab,
+  Tabs,
+  useDisclosure
+} from "@nextui-org/react";
 import { formatEther, parseEther } from "viem";
 import { useAccount } from "wagmi";
 import ActivityTable from "@/components/activity-table";
 import OrderTable from "@/components/order-table";
 import { getBigInt } from "ethers";
+import { ChartComponent } from "@/components/price-chart";
+import { Spinner } from "@nextui-org/spinner";
 
 
 const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
@@ -33,6 +46,8 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
 
   const [shouldFetch, setShouldFetch] = useState<boolean>(true)
 
+  const [chartInterval, setChartInterval] = useState<string>('1d')
+
   const shouldFetchOrders = useMemo(() => {
     return selectedTab === 'listed' && shouldFetch
   }, [selectedTab, shouldFetch])
@@ -44,6 +59,17 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
   const shouldFetchMyOrders = useMemo(() => {
     return selectedTab === 'myOrders' && shouldFetch
   }, [selectedTab, shouldFetch])
+
+  const shouldFetchChart = useMemo(() => {
+    return selectedTab === 'chart' && shouldFetch
+  }, [selectedTab, shouldFetch])
+
+  let chartEp = `${API_ENDPOINT}/market/tokens/${params.name}/price?interval=${chartInterval}`
+  const {
+    data: chartData,
+    error: chartDataError,
+    isValidating: chartDataLoading
+  } = useSWR(shouldFetchChart ? chartEp : null, fetcher)
 
 
   const {
@@ -169,6 +195,52 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
     }
   }, [tokenData])
 
+  const processedData = useMemo(() => {
+    if (chartData === undefined || chartData === null || chartDataError !== undefined || chartDataLoading) {
+      return []
+    }
+
+    return chartData.map((item: any) => {
+      return {
+        time: item.time,
+        value: Number(formatEther(getBigInt(item.value.toString()))),
+      }
+    })
+  }, [chartData, chartDataError, chartDataLoading])
+
+  const chartComponent = useMemo(() => {
+    if (chartDataLoading) {
+      return (
+        <div className="flex justify-center items-center h-80">
+          <Spinner size="lg"/>
+        </div>
+      )
+    }
+
+    if (chartDataError) {
+      return (
+        <div className="flex justify-center items-center h-80">
+          <p className="text-sm text-gray-400">Error fetching chart data</p>
+        </div>
+      )
+    }
+
+    if (processedData.length === 0) {
+      return (
+        <div className="flex justify-center items-center h-80">
+          <p className="text-sm text-gray-400">No enough data to display chart</p>
+        </div>
+      )
+    }
+
+    return (
+      <>
+        <ChartComponent tokenName={params.name} data={processedData}></ChartComponent>
+      </>
+    )
+
+  }, [processedData, chartDataLoading, chartDataError, params])
+
   return (
     <div>
       <Link
@@ -293,6 +365,34 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
                   type={"bid"}
                 />
               </Card>
+            </Tab>
+            <Tab
+              key="chart"
+              title={
+                <div className="flex items-center space-x-2">
+                  <span>Charts</span>
+                </div>
+              }
+            >
+              <div className="p-4 rounded-xl bg-[#18181b]">
+                <Tabs
+                  key={"success"}
+                  color={"success"}
+                  size="lg"
+                  selectedKey={chartInterval}
+                  onSelectionChange={(selection) => {
+                    setChartInterval(selection.toString())
+                  }}
+                  className={"font-mono font-bold mb-4"}
+                >
+                  <Tab key={"1d"} title="1D"/>
+                  <Tab key={"1w"} title="1W"/>
+                  <Tab key={"1m"} title="1M"/>
+                  <Tab key={"1y"} title="1Y"/>
+                  <Tab key={"all"} title="ALL"/>
+                </Tabs>
+                {chartComponent}
+              </div>
             </Tab>
             <Tab
               key="activities"
