@@ -31,25 +31,6 @@ import { SimpleTimer } from "@/components/count-down-timer";
 import { of } from "rxjs";
 import { OfficialBadge, VerifiedBadge } from "@/components/badges";
 
-const mockData = [
-  {
-    id: 1,
-    tick: 'ABC',
-    deployTime: '2024-01-18 12:30:00',
-    progress: 75,
-    holders: "1500",
-    transactions: 3000,
-  },
-  {
-    id: 2,
-    tick: 'XYZ',
-    deployTime: '2024-01-18 14:45:00',
-    progress: 50,
-    holders: "1200",
-    transactions: 2500,
-  },
-];
-
 const formTokensQueryParam = (
   offset: number | undefined,
   limit: number | undefined,
@@ -103,17 +84,36 @@ export default function TokensPage() {
   const [totalPage, setTotalPage] = useState(1);
 
   const [tokenNameFilter, setTokenNameFilter] = useState("");
+  const [tokenTypeFilter, setTokenTypeFilter] = useState("all");
+  const [tokenStatusFilter, setTokenStatusFilter] = useState("all");
+
   const {
     isOpen: deployTokenModalOpen,
     onOpen: onDeployTokenModalOpen,
     onOpenChange: onDeployTokenModalOpenChange
   } = useDisclosure()
 
-  let listTokensEp = `${API_ENDPOINT}/tokens`
-  const queryParam = formTokensQueryParam(offset, limit, sort, order)
-  if (queryParam !== undefined) {
-    listTokensEp = `${listTokensEp}?${queryParam}`
-  }
+  const listTokensEp = useCallback(() => {
+    let ep = `${API_ENDPOINT}/tokens`
+    const queries = []
+    const queryParam = formTokensQueryParam(offset, limit, sort, order)
+    if (queryParam !== undefined) {
+      queries.push(queryParam)
+    }
+    if (tokenNameFilter !== "") {
+      queries.push(`tick=${tokenNameFilter}`)
+    }
+    if (tokenTypeFilter === "fair") {
+      queries.push(`type=fair`)
+    }
+    if (tokenStatusFilter === "progress" || tokenStatusFilter === "completed") {
+      queries.push(`status=${tokenStatusFilter}`)
+    }
+    if (queries.length > 0) {
+      ep = `${ep}?${queries.join('&')}`
+    }
+    return ep
+  }, [limit, offset, order, sort, tokenNameFilter, tokenStatusFilter, tokenTypeFilter])
 
   const {data: res, error, isLoading, isValidating} = useSWR(listTokensEp, fetcher)
 
@@ -337,14 +337,32 @@ export default function TokensPage() {
                   <div className="flex flex-col gap-2 items-center font-mono p-4">
                     <div className="flex flex-row justify-start items-center w-full gap-4">
                       <p className="text-lg w-24 text-end">Type:</p>
-                      <Tabs key={"success"} color={"success"} aria-label="filter tab" radius="md" size="lg">
+                      <Tabs
+                        color={"success"}
+                        aria-label="filter tab"
+                        radius="md"
+                        size="lg"
+                        selectedKey={tokenTypeFilter}
+                        onSelectionChange={(selection) => {
+                          setTokenTypeFilter(selection.toString())
+                        }}
+                      >
                         <Tab key="all" title="All"/>
                         <Tab key="fair" title="Fairmint"/>
                       </Tabs>
                     </div>
                     <div className="flex flex-row justify-start items-center w-full gap-4">
                       <p className="text-lg w-24 text-end">Progress:</p>
-                      <Tabs key={"success"} color={"success"} aria-label="filter tab" radius="md" size="lg">
+                      <Tabs
+                        color={"success"}
+                        aria-label="filter tab"
+                        radius="md"
+                        size="lg"
+                        selectedKey={tokenStatusFilter}
+                        onSelectionChange={(selection) => {
+                          setTokenStatusFilter(selection.toString())
+                        }}
+                      >
                         <Tab key="all" title="All"/>
                         <Tab key="progress" title="In-Progress"/>
                         <Tab key="completed" title="Completed"/>
@@ -366,8 +384,8 @@ export default function TokensPage() {
                 <Button
                   size="lg"
                   isIconOnly={true}
+                  startContent={<FilterIcon/>}
                 >
-                  <FilterIcon/>
                 </Button>
               </PopoverTrigger>
               <PopoverContent>
@@ -406,7 +424,10 @@ export default function TokensPage() {
         <DeployTokenModal isOpen={deployTokenModalOpen} onOpenChange={onDeployTokenModalOpenChange}/>
       </div>
     )
-  }, [deployTokenModalOpen, onDeployTokenModalOpen, onDeployTokenModalOpenChange, tokenNameFilter])
+  }, [
+    deployTokenModalOpen, onDeployTokenModalOpen, onDeployTokenModalOpenChange, tokenNameFilter,
+    tokenStatusFilter, tokenTypeFilter
+  ])
 
 
   return (
