@@ -8,6 +8,7 @@ export const ChartComponent = (props: any) => {
   const {
     data,
     tokenName,
+    isLogarithmic = true,
     colors: {
       backgroundColor = 'transparent',
       lineColor = '#2962FF',
@@ -62,10 +63,11 @@ export const ChartComponent = (props: any) => {
           }
         }
       );
-      newSeries.priceScale().applyOptions({
-        mode: PriceScaleMode.Logarithmic,
-
-      })
+      if (isLogarithmic) {
+        newSeries.priceScale().applyOptions({
+          mode: PriceScaleMode.Logarithmic,
+        })
+      }
       newSeries.setData(data);
 
       chart.subscribeCrosshairMove((param) => {
@@ -89,7 +91,7 @@ export const ChartComponent = (props: any) => {
         chart.remove();
       };
     },
-    [data, backgroundColor, lineColor, textColor, areaTopColor, areaBottomColor]
+    [data, backgroundColor, lineColor, textColor, areaTopColor, areaBottomColor, isLogarithmic]
   );
 
   return (

@@ -145,12 +145,14 @@ const ActivityTable = (props: ActivityTableProps) => {
     switch (columnKey) {
       case 'type':
         switch (cellValue) {
-          case 'Listing':
-            return <p className="text-sm text-primary-500">Listing</p>
-          case 'Sale':
-            return <p className="text-sm text-success-500">Sale</p>
+          case 'Ask':
+          case 'Bid':
+            return <p className="text-sm text-primary-500">{cellValue}</p>
+          case 'Ask Executed':
+          case 'Bid Executed':
+            return <p className="text-sm text-success-500">{cellValue}</p>
           case 'Cancel':
-            return <p className="text-sm text-error-500">Cancel</p>
+            return <p className="text-sm text-danger-500">Cancel</p>
           default:
             return <p className="text-sm">{cellValue}</p>
         }

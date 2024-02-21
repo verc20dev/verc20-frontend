@@ -16,7 +16,7 @@ import {
   CardHeader,
   Chip,
   Divider,
-  Select,
+  Select, Switch,
   Tab,
   Tabs,
   useDisclosure
@@ -47,6 +47,8 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
   const [shouldFetch, setShouldFetch] = useState<boolean>(true)
 
   const [chartInterval, setChartInterval] = useState<string>('1d')
+
+  const [isLogarithmic, setIsLogarithmic] = useState<boolean>(true)
 
   const shouldFetchOrders = useMemo(() => {
     return selectedTab === 'listed' && shouldFetch
@@ -235,11 +237,14 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
 
     return (
       <>
-        <ChartComponent tokenName={params.name} data={processedData}></ChartComponent>
+        <ChartComponent tokenName={params.name} isLogarithmic={isLogarithmic} data={processedData}></ChartComponent>
+        <p className="mt-4 text-xs text-default-500 text-center">Notice:
+          Each chart data point shows the weighted average unit price of executed orders, with token quantity as the
+          weight factor, in specific timeframes.</p>
       </>
     )
 
-  }, [processedData, chartDataLoading, chartDataError, params])
+  }, [processedData, chartDataLoading, chartDataError, params, isLogarithmic])
 
   return (
     <div>
@@ -375,22 +380,34 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
               }
             >
               <div className="p-4 rounded-xl bg-[#18181b]">
-                <Tabs
-                  key={"success"}
-                  color={"success"}
-                  size="lg"
-                  selectedKey={chartInterval}
-                  onSelectionChange={(selection) => {
-                    setChartInterval(selection.toString())
-                  }}
-                  className={"font-mono font-bold mb-4"}
-                >
-                  <Tab key={"1d"} title="1D"/>
-                  <Tab key={"1w"} title="1W"/>
-                  <Tab key={"1m"} title="1M"/>
-                  <Tab key={"1y"} title="1Y"/>
-                  <Tab key={"all"} title="ALL"/>
-                </Tabs>
+                <div
+                  className="flex flex-col-reverse justify-end gap-2 sm:flex-row sm:justify-between sm:items-center mb-4">
+                  <Tabs
+                    key={"success"}
+                    color={"success"}
+                    size="lg"
+                    selectedKey={chartInterval}
+                    onSelectionChange={(selection) => {
+                      setChartInterval(selection.toString())
+                    }}
+                    className={"font-mono font-bold"}
+                  >
+                    <Tab key={"1d"} title="1D"/>
+                    <Tab key={"1w"} title="1W"/>
+                    <Tab key={"1m"} title="1M"/>
+                    <Tab key={"1y"} title="1Y"/>
+                    <Tab key={"all"} title="ALL"/>
+                  </Tabs>
+                  <Switch
+                    size="lg"
+                    defaultSelected
+                    color="secondary"
+                    isSelected={isLogarithmic}
+                    onValueChange={() => setIsLogarithmic(!isLogarithmic)}
+                  >
+                    <p className="font-mono font-bold text-default-500 text-medium">LOG</p>
+                  </Switch>
+                </div>
                 {chartComponent}
               </div>
             </Tab>
@@ -429,17 +446,22 @@ const MarketTokenDetailPage = ({params}: { params: { name: string } }) => {
                   base: "min-h-[400px]",
                 }}
               >
-                <OrderTable
-                  tick={params.name}
-                  shouldFetch={shouldFetchMyOrders}
-                  // @ts-ignore
-                  address={address}
-                  ethPrice={ethPrice?.data?.amount}
-                  justSelf={true}
-                  setParentRefetch={setShouldFetch}
-                  type={"ask"}
-                  displayTypeToggle={true}
-                />
+                {isConnected ? <OrderTable
+                    tick={params.name}
+                    shouldFetch={shouldFetchMyOrders}
+                    // @ts-ignore
+                    address={address}
+                    ethPrice={ethPrice?.data?.amount}
+                    justSelf={true}
+                    setParentRefetch={setShouldFetch}
+                    type={"ask"}
+                    displayTypeToggle={true}
+                  />
+                  :
+                  <div className="flex justify-center items-center h-96">
+                    <p className="text-sm text-gray-400">Please connect your wallet first.</p>
+                  </div>
+                }
               </Card>
             </Tab>
           </Tabs>
