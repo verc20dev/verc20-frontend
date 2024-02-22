@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { Key, useCallback, useMemo, useState } from 'react';
 import { Button } from "@nextui-org/button";
 import CreateOrderModal from "@/components/create-order-modal";
 import {
@@ -161,8 +161,8 @@ const MarketplacePage = () => {
     switch (columnKey) {
       case 'tick':
         return (
-          <div className="flex gap-2 items-center w-[250px] justify-center">
-            <span className="font-bold text-2xl font-sans-mono">{cellValue}</span>
+          <div className="flex gap-2 items-center w-[120px] sm:w-[250px] justify-center">
+            <span className="font-bold text-xl sm:text-2xl font-sans-mono">{cellValue}</span>
             { tokenIsVerified(cellValue) && <VerifiedBadge/> }
             { tokenIsOfficial(cellValue) && <OfficialBadge/> }
           </div>
@@ -216,17 +216,29 @@ const MarketplacePage = () => {
     </div>
   }, [currentPage, filterSelected, totalPage])
 
+  const tableCellClassName = useCallback((cellKey: Key) => {
+    if (cellKey === "tick") {
+      return "w-[120px] sm:w-[250px]"
+    } else {
+      return ""
+    }
+  }, [])
+
 
   return (
     <div>
       <h1 className="text-3xl font-bold">Marketplace</h1>
 
       <div className="flex flex-col mt-8 w-full gap-3">
-        <div className="flex font-mono gap-4 flex-col items-center sm:flex-row sm:justify-between ">
-          <div>
+        <div className="flex font-mono gap-4 flex-col w-full items-center sm:flex-row sm:justify-between ">
+          <div className="w-full sm:w-fit">
             <Tabs
               key={"success"} color={"success"}
               aria-label="filter tab" radius="md" size="lg"
+              className="w-full sm:w-fit"
+              classNames={{
+                tabList: "w-full sm:w-fit"
+              }}
               selectedKey={filterSelected}
               onSelectionChange={(key) => {
                 if (key.toString() === 'trending') {
@@ -240,7 +252,7 @@ const MarketplacePage = () => {
               <Tab key="all" title="All"/>
             </Tabs>
           </div>
-          <div>
+          <div className="w-full sm:w-fit">
             <Input
               isClearable
               // className={"hidden sm:block"}
@@ -311,7 +323,7 @@ const MarketplacePage = () => {
               {(item: any) => (
                 <TableRow key={item['tick']} className="cursor-pointer h-[64px]">
                   {(columnKey) =>
-                    <TableCell className={columnKey === 'tick' ? 'w-[250px]' : ''}>
+                    <TableCell className={tableCellClassName(columnKey)}>
                       {renderCell(item, columnKey)}
                     </TableCell>}
                 </TableRow>

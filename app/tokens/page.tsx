@@ -17,7 +17,7 @@ import {
   ModalFooter, useDisclosure, Tabs, Tab,
   Popover, PopoverTrigger, PopoverContent, Spacer,
 } from "@nextui-org/react";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { Key, useCallback, useMemo, useState } from "react";
 import { API_ENDPOINT } from "@/config/constants";
 import useSWR from "swr";
 import { Spinner } from "@nextui-org/spinner";
@@ -222,8 +222,8 @@ export default function TokensPage() {
     switch (columnKey) {
       case "tick":
         return (
-          <div className="flex gap-2 items-center w-[250px] justify-center">
-            <span className="font-bold text-2xl font-sans-mono">{cellValue}</span>
+          <div className="flex gap-2 items-center w-[120px] sm:w-[250px] justify-center">
+            <span className="font-bold text-xl sm:text-2xl font-sans-mono">{cellValue}</span>
             {tokenIsVerified(cellValue) && <VerifiedBadge/>}
             {tokenIsOfficial(cellValue) && <OfficialBadge/>}
           </div>
@@ -429,6 +429,16 @@ export default function TokensPage() {
     tokenStatusFilter, tokenTypeFilter
   ])
 
+  const tableCellClassName = useCallback((cellKey: Key) => {
+    if (cellKey === "tick") {
+      return "w-[120px] sm:w-[250px]"
+    } else if (cellKey === 'progress') {
+      return "min-w-[200px]"
+    } else {
+      return ""
+    }
+  }, [])
+
 
   return (
     <div>
@@ -483,7 +493,7 @@ export default function TokensPage() {
             {(item: any) => (
               <TableRow key={item['tick']} className="cursor-pointer h-[64px]">
                 {(columnKey) =>
-                  <TableCell className={columnKey === 'tick' ? 'w-[250px]' : ''}>
+                  <TableCell className={tableCellClassName(columnKey)}>
                     {renderCell(item, columnKey)}
                   </TableCell>}
               </TableRow>
