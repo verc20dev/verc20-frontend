@@ -14,8 +14,8 @@ export const siteConfig = {
     },
   ],
   links: {
-    github: "https://github.com/nextui-org/nextui",
-    twitter: "https://twitter.com/getnextui",
-    docs: "https://nextui.org",
+    twitter: "https://twitter.com/verc_official",
+    discord: "https://discord.gg/pJxTEucB",
+    docs: "https://docs.verc-20.xyz",
   },
 }
