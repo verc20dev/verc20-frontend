@@ -8,7 +8,7 @@ const toCbor = (payload: any) => {
 }
 
 let defaultPayload = {
-  p: 'erc-20',
+  p: 'verc-20',
 }
 
 export interface DeployInput {
