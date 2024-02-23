@@ -13,10 +13,10 @@ const Footer = () => {
           <SyncStatusBar/>
         </div>
         <div className="flex gap-2">
-          <Link color="foreground" href={siteConfig.links.docs} isExternal>
+          <Link color="foreground" href={siteConfig.links.discord} isExternal>
             <DiscordIcon />
           </Link>
-          <Link color="foreground" href={siteConfig.links.docs} isExternal>
+          <Link color="foreground" href={siteConfig.links.twitter} isExternal>
             <TwitterIcon/>
           </Link>
           <Link color="foreground" href={siteConfig.links.docs} isExternal>

@@ -133,7 +133,7 @@ export const Navbar = () => {
                 <div className="flex flex-row gap-8">
                   <Link
                     color="foreground"
-                    href="https://discord.gg/4a8kWUz9"
+                    href={siteConfig.links.discord}
                     size="lg"
                     target="_blank"
                   >
@@ -141,7 +141,7 @@ export const Navbar = () => {
                   </Link>
                   <Link
                     color="foreground"
-                    href="https://discord.gg/4a8kWUz9"
+                    href={siteConfig.links.twitter}
                     size="lg"
                     target="_blank"
                   >
@@ -149,19 +149,11 @@ export const Navbar = () => {
                   </Link>
                   <Link
                     color="foreground"
-                    href="https://discord.gg/4a8kWUz9"
+                    href={siteConfig.links.docs}
                     size="lg"
                     target="_blank"
                   >
                     <GitBookIcon size={30}/>
-                  </Link>
-                  <Link
-                    color="foreground"
-                    href="https://discord.gg/4a8kWUz9"
-                    size="lg"
-                    target="_blank"
-                  >
-                    <GithubIcon size={30}/>
                   </Link>
                 </div>
 
