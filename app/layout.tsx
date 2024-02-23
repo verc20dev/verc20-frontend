@@ -16,6 +16,7 @@ const sansMono = Noto_Sans_Mono({
 export const metadata: Metadata = {
   title: 'vERC-20',
   description: 'A leading platform for Ethereum inscriptions',
+  metadataBase: new URL('https://verc-20.xyz'),
 }
 
 export default function RootLayout({
